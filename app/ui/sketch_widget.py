@@ -1,4 +1,4 @@
-﻿"""Dynamic lifting sketch widget that adapts to loop count and anchorage diagnostics."""
+"""Dynamic lifting sketch widget that adapts to loop count and anchorage diagnostics."""
 
 from __future__ import annotations
 
@@ -41,6 +41,7 @@ class LiftingSketchWidget(QWidget):
         anchorage_type: AnchorageType,
         inclination_deg: float,
         anchorage_is_ok: bool = True,
+        capacity_is_ok: bool = True,
         required_anchorage_cm: float = 0.0,
         available_anchorage_cm: float = 0.0,
     ) -> None:
@@ -49,6 +50,7 @@ class LiftingSketchWidget(QWidget):
         self._anchorage_type = anchorage_type
         self._inclination_deg = max(5.0, min(90.0, inclination_deg))
         self._anchorage_is_ok = anchorage_is_ok
+        self._capacity_is_ok = capacity_is_ok
         self._required_anchorage_cm = max(0.0, required_anchorage_cm)
         self._available_anchorage_cm = max(0.0, available_anchorage_cm)
         self.update()
@@ -102,7 +104,8 @@ class LiftingSketchWidget(QWidget):
         n = self._loops_count
         cw = concrete.width()
         cl = concrete.left()
-        strand_color = _STRAND_OK_COLOR if self._anchorage_is_ok else _STRAND_FAIL_COLOR
+        is_ok = self._anchorage_is_ok and getattr(self, '_capacity_is_ok', True)
+        strand_color = _STRAND_OK_COLOR if is_ok else _STRAND_FAIL_COLOR
 
         margin = cw * 0.12
         usable = cw - 2 * margin
@@ -361,8 +364,19 @@ class LiftingSketchWidget(QWidget):
         )
 
         legend_rect = QRectF(area.left(), area.bottom() - 30, area.width(), 12)
-        p.setPen(QPen(_STRAND_OK_COLOR if self._anchorage_is_ok else _STRAND_FAIL_COLOR, 1))
-        legend_text = "Cordoalha: OK" if self._anchorage_is_ok else "Cordoalha: ancoragem insuficiente"
+        is_ok = self._anchorage_is_ok and getattr(self, '_capacity_is_ok', True)
+        p.setPen(QPen(_STRAND_OK_COLOR if is_ok else _STRAND_FAIL_COLOR, 1))
+        
+        if is_ok:
+            legend_text = "Cordoalha: OK"
+        else:
+            if not getattr(self, '_capacity_is_ok', True) and not self._anchorage_is_ok:
+                legend_text = "Cordoalha: Cap. e Anc. insuficientes"
+            elif not getattr(self, '_capacity_is_ok', True):
+                legend_text = "Cordoalha: Capacidade insuficiente"
+            else:
+                legend_text = "Cordoalha: Ancoragem insuficiente"
+                
         p.drawText(legend_rect, Qt.AlignLeft | Qt.AlignBottom, legend_text)
 
         hook_x = area.left() + area.width() / 2

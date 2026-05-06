@@ -76,13 +76,13 @@ class MainWindow(QMainWindow):
     def _build_verification_tab(self) -> QWidget:
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setSpacing(8)
+        layout.setSpacing(6)
         layout.setContentsMargins(0, 10, 0, 0)
 
         top_content = QWidget()
         top_row = QHBoxLayout(top_content)
         top_row.setContentsMargins(0, 0, 0, 0)
-        top_row.setSpacing(12)
+        top_row.setSpacing(10)
         top_row.addWidget(self._build_input_group(), 3)
         top_row.addWidget(self._build_result_panel(), 4)
 
@@ -90,15 +90,15 @@ class MainWindow(QMainWindow):
         sketch_layout = QVBoxLayout(sketch_group)
         sketch_layout.setContentsMargins(4, 4, 4, 4)
         self.sketch_widget = LiftingSketchWidget()
-        self.sketch_widget.setMinimumHeight(200)
+        self.sketch_widget.setMinimumHeight(140)
         sketch_layout.addWidget(self.sketch_widget)
 
         splitter = QSplitter(Qt.Vertical)
         splitter.addWidget(top_content)
         splitter.addWidget(sketch_group)
-        splitter.setStretchFactor(0, 4)
+        splitter.setStretchFactor(0, 5)
         splitter.setStretchFactor(1, 2)
-        splitter.setSizes([520, 220])
+        splitter.setSizes([560, 160])
         layout.addWidget(splitter, 1)
 
         return tab
@@ -230,26 +230,42 @@ class MainWindow(QMainWindow):
         calculate_button = QPushButton("Calcular Verificação")
         calculate_button.setCursor(Qt.PointingHandCursor)
         calculate_button.clicked.connect(lambda: self._on_calculate(show_errors=True))
+
+        # Scroll area para o formulário (permite acessar todos os campos em janelas menores)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        form_container = QWidget()
+        form_layout = QVBoxLayout(form_container)
+        form_layout.setContentsMargins(0, 0, 4, 0)
+        form_layout.setSpacing(0)
+        form_layout.addLayout(form)
+        form_layout.addStretch(1)
+        scroll.setWidget(form_container)
+
+        outer.addWidget(scroll, 1)
         outer.addWidget(calculate_button)
-        outer.addStretch(1)
         return group
 
     def _build_result_panel(self) -> QGroupBox:
         group = QGroupBox("Resultado da Verificação")
         outer_layout = QVBoxLayout(group)
-        outer_layout.setSpacing(6)
+        outer_layout.setSpacing(8)
+        outer_layout.setContentsMargins(8, 16, 8, 8)
 
-        # Status banner
+        # --- Banner de status ---
         self.status_label = QLabel("Preencha os dados e clique em 'Calcular Verificação'.")
         self.status_label.setWordWrap(True)
         self.status_label.setAlignment(Qt.AlignCenter)
-        self.status_label.setMinimumHeight(36)
+        self.status_label.setMinimumHeight(38)
         self.status_label.setStyleSheet(
             "background: #eef0f2; padding: 8px 10px; border: 1px solid #d2d6dc;"
-            " border-radius: 4px; font-weight: 600; font-size: 10pt;"
+            " border-radius: 4px; font-weight: 700; font-size: 11pt;"
         )
         outer_layout.addWidget(self.status_label)
 
+        # --- Barras de Resumo ---
         bars_group = QGroupBox("Resumo Visual")
         bars_layout = QFormLayout(bars_group)
         bars_layout.setSpacing(6)
@@ -259,93 +275,46 @@ class MainWindow(QMainWindow):
         bars_layout.addRow("Fator de segurança:", self.safety_factor_bar)
         outer_layout.addWidget(bars_group)
 
-        # Scrollable results area
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        scroll_content = QWidget()
-        result_layout = QVBoxLayout(scroll_content)
-        result_layout.setSpacing(10)
-        result_layout.setContentsMargins(0, 4, 0, 4)
-
+        # --- Indicadores essenciais (sem scroll, fixo) ---
         self.result_fields: dict[str, QLineEdit] = {}
 
-        # Section 1: Indicadores
-        result_layout.addWidget(self._section_label("Indicadores"))
-        indicator_form = QFormLayout()
-        indicator_form.setSpacing(5)
+        indicators_group = QGroupBox("Indicadores")
+        ind_form = QFormLayout(indicators_group)
+        ind_form.setSpacing(5)
         for key, label in (
             ("utilization", "Taxa de utilização"),
             ("safety_factor", "Fator de segurança (FS)"),
-            ("stress_developed", "Tensão desenvolvida (MPa)"),
-            ("stress_mobilization", "Mobilização do aço (% fpyd)"),
-        ):
-            field = self._result_field()
-            self.result_fields[key] = field
-            indicator_form.addRow(label + ":", field)
-        result_layout.addLayout(indicator_form)
-
-        # Section 2: Cargas
-        result_layout.addWidget(self._section_label("Cargas"))
-        load_form = QFormLayout()
-        load_form.setSpacing(5)
-        for key, label in (
             ("piece_weight_tf", "Massa da peça (tf)"),
             ("majorated_weight_tf", "Massa majorada (tf)"),
             ("tension_per_loop_tf", "Carga por alça (tf)"),
-            ("tension_per_leg_tf", "Carga por perna (tf)"),
-            ("total_legs", "Total de pernas"),
+            ("required_anchorage_cm", "Anc. necessária (cm)"),
+            ("available_anchorage_cm", "Anc. disponível (cm)"),
         ):
             field = self._result_field()
             self.result_fields[key] = field
-            load_form.addRow(label + ":", field)
-        result_layout.addLayout(load_form)
+            ind_form.addRow(label + ":", field)
+        outer_layout.addWidget(indicators_group)
 
-        # Section 3: Verificações
-        result_layout.addWidget(self._section_label("Verificações"))
-        check_form = QFormLayout()
-        check_form.setSpacing(5)
-        for key, label in (
-            ("max_load_steel_tf", "Carga máx. aço (tf)"),
-            ("max_load_bond_tf", "Carga máx. aderência (tf)"),
-            ("max_load_tf", "Carga máx. governante (tf)"),
-            ("governing_criterion", "Critério governante"),
-            ("base_anchorage_cm", "Anc. necessária reta (cm)"),
-            ("required_anchorage_cm", "Anc. necessária c/redução (cm)"),
-            ("available_anchorage_cm", "Ancoragem disponível (cm)"),
+        # --- Campos adicionais ocultos (populados mas não exibidos aqui) ---
+        for key in (
+            "stress_developed", "stress_mobilization",
+            "tension_per_leg_tf", "total_legs",
+            "ecj_mpa", "fctm_j_mpa", "fctm_28_mpa",
+            "fpyd_mpa", "fbpd_j_mpa", "fbpd_28_mpa",
+            "max_load_steel_tf", "max_load_bond_tf", "max_load_tf",
+            "governing_criterion", "base_anchorage_cm",
         ):
             field = self._result_field()
             self.result_fields[key] = field
-            check_form.addRow(label + ":", field)
-        result_layout.addLayout(check_form)
-
-        # Section 4: Propriedades dos materiais
-        result_layout.addWidget(self._section_label("Propriedades dos Materiais"))
-        mat_form = QFormLayout()
-        mat_form.setSpacing(5)
-        for key, label in (
-            ("ecj_mpa", "Ec,j (MPa)"),
-            ("fctm_j_mpa", "fctm,j (MPa)"),
-            ("fctm_28_mpa", "fctm,28 (MPa)"),
-            ("fpyd_mpa", "fpyd (MPa)"),
-            ("fbpd_j_mpa", "fbpd,j (MPa)"),
-            ("fbpd_28_mpa", "fbpd,28 (MPa)"),
-        ):
-            field = self._result_field()
-            self.result_fields[key] = field
-            mat_form.addRow(label + ":", field)
-        result_layout.addLayout(mat_form)
-
-        result_layout.addStretch(1)
-        scroll.setWidget(scroll_content)
-        outer_layout.addWidget(scroll, 1)
+            # Não adiciona ao layout — apenas populado para a memória
 
         memory_hint = QLabel("<a href='#'>Memória completa na aba 'Memória de Cálculo'.</a>")
         memory_hint.setAlignment(Qt.AlignCenter)
-        memory_hint.setStyleSheet("font-size: 9.5pt; color: #334155; text-decoration: none;")
+        memory_hint.setStyleSheet("font-size: 9pt; color: #334155;")
         memory_hint.setOpenExternalLinks(False)
         memory_hint.linkActivated.connect(lambda: self.tabs.setCurrentIndex(1))
         outer_layout.addWidget(memory_hint)
+        outer_layout.addStretch(1)
 
         return group
 
@@ -541,16 +510,20 @@ class MainWindow(QMainWindow):
             )
         else:
             failures = []
+            suggestions = []
+            
             if not result.capacity_is_ok:
-                failures.append("capacidade insuficiente (aumente alças, diâmetro da cordoalha ou reduza carga)")
+                failures.append("Capacidade estrutural insuficiente")
+                suggestions.append("aumente alças ou diâmetro da cordoalha")
             if not result.anchorage_is_ok:
-                failures.append(
-                    f"ancoragem insuficiente (necessária: {result.required_anchorage_cm:.2f} cm, "
-                    f"disponível: {data.available_anchorage_cm:.2f} cm)"
-                )
-            self.status_label.setText(
-                f"VERIFICAÇÃO REPROVADA: {', '.join(failures)}"
-            )
+                failures.append(f"Ancoragem insuficiente (disp. {data.available_anchorage_cm:.1f}cm < nec. {result.required_anchorage_cm:.1f}cm)")
+                suggestions.append("aumente a altura da peça ou use ganchos")
+                
+            text = f"VERIFICAÇÃO REPROVADA: {', '.join(failures)}."
+            if suggestions:
+                text += f"\n💡 Sugestão: {', '.join(set(suggestions))}."
+                
+            self.status_label.setText(text)
             self.status_label.setStyleSheet(
                 "background: #fef2f2; color: #991b1b; padding: 8px 10px;"
                 " border: 1px solid #fecaca; border-radius: 4px;"
@@ -566,6 +539,7 @@ class MainWindow(QMainWindow):
             anchorage_type=data.anchorage_type,
             inclination_deg=data.inclination_deg,
             anchorage_is_ok=result.anchorage_is_ok,
+            capacity_is_ok=result.capacity_is_ok,
             required_anchorage_cm=result.required_anchorage_cm,
             available_anchorage_cm=data.available_anchorage_cm,
         )
