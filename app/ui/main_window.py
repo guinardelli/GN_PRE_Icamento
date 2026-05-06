@@ -26,13 +26,25 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.config.settings import APP_NAME, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH
+from app.config.settings import (
+    APP_NAME,
+    APP_VERSION,
+    WINDOW_MIN_HEIGHT,
+    WINDOW_MIN_WIDTH,
+)
 from app.core.exceptions import ValidationError
-from app.core.models import AnchorageType, ANCHORAGE_TYPE_LABELS, BondCondition, LiftingInput, LiftingResult, STRAND_SPECS
+from app.core.models import (
+    ANCHORAGE_TYPE_LABELS,
+    STRAND_SPECS,
+    AnchorageType,
+    BondCondition,
+    LiftingInput,
+    LiftingResult,
+)
 from app.core.services import LiftingVerifierService
+from app.infrastructure.svg_exporter import export_lifting_svg
 from app.ui.sketch_widget import LiftingSketchWidget
 from app.ui.styles import base_style
-
 
 
 class MainWindow(QMainWindow):
@@ -41,6 +53,9 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self._service = LiftingVerifierService()
+        self._last_lifting_data: LiftingInput | None = None
+        self._last_lifting_result: LiftingResult | None = None
+        self._shortcuts: list[QShortcut] = []
         self._build_ui()
         self._connect_auto_calculate()
         self._setup_shortcuts()
@@ -48,7 +63,7 @@ class MainWindow(QMainWindow):
         self._set_tab_order()
         self._validate_fck_relationship()
         # Auto-calculate with default values on startup
-        self._on_calculate(show_errors=False)
+        self._recalculate()
 
     def _build_ui(self) -> None:
         self.setWindowTitle(APP_NAME)
@@ -182,17 +197,20 @@ class MainWindow(QMainWindow):
         self.gamma_n_input.setValue(1.30)
 
         for widget in (
-            self.fckj_input, self.fck_28_input,
-            self.volume_input, self.unit_weight_input,
-            self.strand_input, self.inclination_input, self.loops_input,
-            self.anchorage_input, self.anchorage_type_input, self.bond_input,
-            self.beta_a_input, self.gamma_n_input,
+            self.fckj_input,
+            self.fck_28_input,
+            self.volume_input,
+            self.unit_weight_input,
+            self.strand_input,
+            self.inclination_input,
+            self.loops_input,
+            self.anchorage_input,
+            self.anchorage_type_input,
+            self.bond_input,
+            self.beta_a_input,
+            self.gamma_n_input,
         ):
             widget.setFixedWidth(142)
-
-        calculate_button = QPushButton("Calcular Verificação")
-        calculate_button.setCursor(Qt.PointingHandCursor)
-        calculate_button.clicked.connect(lambda: self._on_calculate(show_errors=True))
 
         piece_group, piece_form = self._new_form_group("Peça")
         piece_form.addRow("Volume", self.volume_input)
@@ -222,7 +240,6 @@ class MainWindow(QMainWindow):
         outer.addWidget(anchorage_group)
         outer.addWidget(coefficients_group)
         outer.addStretch(1)
-        outer.addWidget(calculate_button)
         return panel
 
     def _build_result_panel(self) -> QGroupBox:
@@ -249,8 +266,8 @@ class MainWindow(QMainWindow):
         for key, label in (
             ("utilization", "Taxa de utilização"),
             ("safety_factor", "Fator de segurança (FS)"),
-            ("piece_weight_tf", "Massa da peça (tf)"),
-            ("majorated_weight_tf", "Massa majorada (tf)"),
+            ("piece_weight_tf", "Peso da peça (tf)"),
+            ("majorated_weight_tf", "Peso majorado (tf)"),
             ("tension_per_loop_tf", "Carga por alça (tf)"),
             ("required_anchorage_cm", "Anc. necessária (cm)"),
             ("available_anchorage_cm", "Anc. disponível (cm)"),
@@ -304,21 +321,13 @@ class MainWindow(QMainWindow):
 
         self.memory_text = QTextEdit()
         self.memory_text.setReadOnly(True)
-        self.memory_text.setPlaceholderText("Calcule na aba 'Verificação' para gerar a memória.")
+        self.memory_text.setPlaceholderText(
+            "A memória é atualizada automaticamente com os dados de entrada."
+        )
 
         layout.addLayout(toolbar)
         layout.addWidget(self.memory_text)
         return tab
-
-    @staticmethod
-    def _section_label(text: str) -> QLabel:
-        label = QLabel(text)
-        label.setStyleSheet(
-            "font-weight: 700; font-size: 10pt; color: #0f172a;"
-            " border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;"
-            " margin-top: 8px; background: transparent;"
-        )
-        return label
 
     @staticmethod
     def _result_field() -> QLineEdit:
@@ -343,6 +352,10 @@ class MainWindow(QMainWindow):
         export_memory_action.triggered.connect(self._export_memory)
         file_menu.addAction(export_memory_action)
 
+        export_svg_action = QAction("Exportar Desenho (.svg)...", self)
+        export_svg_action.triggered.connect(self._export_svg)
+        file_menu.addAction(export_svg_action)
+
         tools_menu = menu.addMenu("&Ferramentas")
         restore_defaults_action = QAction("Restaurar Padrões", self)
         restore_defaults_action.setShortcut(QKeySequence("Ctrl+R"))
@@ -365,9 +378,13 @@ class MainWindow(QMainWindow):
         self.volume_input.setToolTip("Volume da peça de concreto em metros cúbicos.")
         self.unit_weight_input.setToolTip("Peso específico do concreto em tf/m3.")
         self.strand_input.setToolTip("Tipo de cordoalha de protensão utilizado no içamento.")
-        self.inclination_input.setToolTip("Inclinação da alça em relação ao plano horizontal.")
+        self.inclination_input.setToolTip(
+            "Inclinação da alça em relação ao plano horizontal."
+        )
         self.anchorage_input.setToolTip("Comprimento de ancoragem disponível em centímetros.")
-        self.anchorage_type_input.setToolTip("Tratamento da ponta da alça para redução da ancoragem.")
+        self.anchorage_type_input.setToolTip(
+            "Tratamento da ponta da alça para redução da ancoragem."
+        )
         self.bond_input.setToolTip("Condição de aderência entre aço e concreto.")
         self.loops_input.setToolTip("Número total de alças de içamento.")
         self.beta_a_input.setToolTip(
@@ -380,10 +397,14 @@ class MainWindow(QMainWindow):
         self.fckj_input.setAccessibleName("Fck na idade de içamento em MPa")
         self.fck_28_input.setAccessibleName("Fck aos 28 dias em MPa")
         self.volume_input.setAccessibleName("Volume da peça em metros cúbicos")
-        self.unit_weight_input.setAccessibleName("Peso específico do concreto em tf por metro cúbico")
+        self.unit_weight_input.setAccessibleName(
+            "Peso específico do concreto em tf por metro cúbico"
+        )
         self.strand_input.setAccessibleName("Tipo de cordoalha")
         self.inclination_input.setAccessibleName("Inclinação da alça em graus")
-        self.anchorage_input.setAccessibleName("Comprimento de ancoragem disponível em centímetros")
+        self.anchorage_input.setAccessibleName(
+            "Comprimento de ancoragem disponível em centímetros"
+        )
         self.anchorage_type_input.setAccessibleName("Tipo de ancoragem")
         self.bond_input.setAccessibleName("Condição de aderência")
         self.loops_input.setAccessibleName("Número de alças")
@@ -409,10 +430,10 @@ class MainWindow(QMainWindow):
         self.anchorage_type_input.currentIndexChanged.connect(self._on_auto_calculate)
 
     def _setup_shortcuts(self) -> None:
-        QShortcut(QKeySequence("F5"), self, lambda: self._on_calculate(show_errors=True))
-        QShortcut(QKeySequence("Ctrl+Enter"), self, lambda: self._on_calculate(show_errors=True))
-        QShortcut(QKeySequence("Ctrl+1"), self, lambda: self.tabs.setCurrentIndex(0))
-        QShortcut(QKeySequence("Ctrl+2"), self, lambda: self.tabs.setCurrentIndex(1))
+        self._shortcuts = [
+            QShortcut(QKeySequence("Ctrl+1"), self, lambda: self.tabs.setCurrentIndex(0)),
+            QShortcut(QKeySequence("Ctrl+2"), self, lambda: self.tabs.setCurrentIndex(1)),
+        ]
 
     def _set_tab_order(self) -> None:
         QWidget.setTabOrder(self.fckj_input, self.fck_28_input)
@@ -429,18 +450,16 @@ class MainWindow(QMainWindow):
 
     def _on_auto_calculate(self, *_: object) -> None:
         self._validate_fck_relationship()
-        self._on_calculate(show_errors=False)
+        self._recalculate()
 
-    def _on_calculate(self, show_errors: bool = True) -> None:
+    def _recalculate(self) -> None:
         self._validate_fck_relationship()
         try:
             data = self._read_input()
             result = self._service.calculate(data)
             memory_text = self._service.build_calculation_memory(data, result)
         except ValidationError as exc:
-            self.statusBar().showMessage(f"Erro de validação: {exc}", 6000)
-            if show_errors:
-                QMessageBox.warning(self, APP_NAME, str(exc))
+            self._show_validation_error(exc)
             return
 
         is_approved = result.capacity_is_ok and result.anchorage_is_ok
@@ -451,16 +470,21 @@ class MainWindow(QMainWindow):
                 "border: 1px solid #b7dfc0; font-weight: 700;"
             )
             self.statusBar().showMessage(
-                f"Aprovada | FS = {result.safety_factor:.2f} | Utilização = {result.utilization_ratio:.1%}"
+                f"Aprovada | FS = {result.safety_factor:.2f} | "
+                f"Utilização = {result.utilization_ratio:.1%}"
             )
         else:
             failures = []
-            
+
             if not result.capacity_is_ok:
                 failures.append("Capacidade estrutural insuficiente")
             if not result.anchorage_is_ok:
-                failures.append(f"Ancoragem insuficiente (disp. {data.available_anchorage_cm:.1f}cm < nec. {result.required_anchorage_cm:.1f}cm)")
-                
+                failures.append(
+                    "Ancoragem insuficiente "
+                    f"(disp. {data.available_anchorage_cm:.1f}cm < "
+                    f"nec. {result.required_anchorage_cm:.1f}cm)"
+                )
+
             self.status_label.setText("VERIFICAÇÃO REPROVADA")
             self.status_label.setStyleSheet(
                 "background: #fdecec; color: #9b1c1c; padding: 5px 8px;"
@@ -468,6 +492,8 @@ class MainWindow(QMainWindow):
             )
             self.statusBar().showMessage("Reprovada | " + ", ".join(failures), 9000)
 
+        self._last_lifting_data = data
+        self._last_lifting_result = result
         self._update_result_fields(result, data.available_anchorage_cm)
         self.memory_text.setPlainText(memory_text)
         self.sketch_widget.update_sketch(
@@ -480,6 +506,34 @@ class MainWindow(QMainWindow):
             available_anchorage_cm=data.available_anchorage_cm,
         )
         self._validate_anchorage_field(result, data.available_anchorage_cm)
+
+    def _show_validation_error(self, error: ValidationError) -> None:
+        self._last_lifting_data = None
+        self._last_lifting_result = None
+        self.status_label.setText("ENTRADA INVÁLIDA")
+        self.status_label.setStyleSheet(
+            "background: #fff7ed; color: #9a3412; padding: 5px 8px;"
+            "border: 1px solid #fed7aa; font-weight: 700;"
+        )
+        self.statusBar().showMessage(f"Ajuste os dados de entrada: {error}", 9000)
+        self.memory_text.setPlainText(
+            "ENTRADA INVÁLIDA\n\n"
+            f"{error}\n\n"
+            "A memória de cálculo será atualizada automaticamente após a correção."
+        )
+        self.anchorage_input.setProperty("invalid", False)
+        self.anchorage_input.style().unpolish(self.anchorage_input)
+        self.anchorage_input.style().polish(self.anchorage_input)
+        self._clear_result_fields()
+
+    def _clear_result_fields(self) -> None:
+        for field in self.result_fields.values():
+            field.clear()
+            field.setStyleSheet(
+                "QLineEdit { background-color: #efefef;"
+                " border: 1px solid #d6d6d6;"
+                " color: #111111; font-weight: 600; }"
+            )
 
     def _read_input(self) -> LiftingInput:
         bond = BondCondition(self.bond_input.currentData())
@@ -531,7 +585,10 @@ class MainWindow(QMainWindow):
             "available_anchorage_cm": f"{available_anchorage_cm:.2f}",
             "utilization": f"{result.utilization_ratio:.1%}",
             "safety_factor": f"{result.safety_factor:.2f}",
-            "stress_developed": f"{result.stress_developed_mpa:.1f}  (fpyd = {result.fpyd_mpa:.1f} MPa)",
+            "stress_developed": (
+                f"{result.stress_developed_mpa:.1f}  "
+                f"(fpyd = {result.fpyd_mpa:.1f} MPa)"
+            ),
             "stress_mobilization": f"{result.stress_mobilization_ratio:.1%}",
         }
         for key, value in values.items():
@@ -550,14 +607,22 @@ class MainWindow(QMainWindow):
             return
         if is_ok:
             field.setStyleSheet(
-                "QLineEdit { background-color: #efefef; border: 1px solid #d6d6d6; color: #0b6b2b; font-weight: 700; }"
+                "QLineEdit { background-color: #efefef;"
+                " border: 1px solid #d6d6d6;"
+                " color: #0b6b2b; font-weight: 700; }"
             )
         else:
             field.setStyleSheet(
-                "QLineEdit { background-color: #efefef; border: 1px solid #d6d6d6; color: #c62828; font-weight: 700; }"
+                "QLineEdit { background-color: #efefef;"
+                " border: 1px solid #d6d6d6;"
+                " color: #c62828; font-weight: 700; }"
             )
 
-    def _validate_anchorage_field(self, result: LiftingResult, available_anchorage_cm: float) -> None:
+    def _validate_anchorage_field(
+        self,
+        result: LiftingResult,
+        available_anchorage_cm: float,
+    ) -> None:
         is_invalid = available_anchorage_cm < result.required_anchorage_cm
         self.anchorage_input.setProperty("invalid", is_invalid)
         self.anchorage_input.style().unpolish(self.anchorage_input)
@@ -568,7 +633,9 @@ class MainWindow(QMainWindow):
                 f"Ancoragem insuficiente. Necessário >= {result.required_anchorage_cm:.2f} cm."
             )
         else:
-            self.anchorage_input.setToolTip("Comprimento de ancoragem disponível em centímetros.")
+            self.anchorage_input.setToolTip(
+                "Comprimento de ancoragem disponível em centímetros."
+            )
 
     def _restore_defaults(self) -> None:
         self.fckj_input.setValue(15.0)
@@ -593,7 +660,7 @@ class MainWindow(QMainWindow):
         if anchorage_type_index >= 0:
             self.anchorage_type_input.setCurrentIndex(anchorage_type_index)
 
-        self._on_calculate(show_errors=False)
+        self._recalculate()
         self.statusBar().showMessage("Parâmetros restaurados para os valores padrão.", 4000)
 
     def _export_memory(self) -> None:
@@ -621,11 +688,39 @@ class MainWindow(QMainWindow):
 
         self.statusBar().showMessage(f"Memória exportada em: {file_path}", 5000)
 
+    def _export_svg(self) -> None:
+        if self._last_lifting_data is None or self._last_lifting_result is None:
+            QMessageBox.warning(self, APP_NAME, "Nao ha calculo para exportar.")
+            return
+
+        suggested_name = "desenho_icamento.svg"
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Exportar Desenho SVG",
+            str(Path.home() / suggested_name),
+            "Arquivo SVG (*.svg);;Todos os arquivos (*.*)",
+        )
+        if not file_path:
+            return
+
+        try:
+            export_lifting_svg(
+                file_path,
+                self._last_lifting_data,
+                self._last_lifting_result,
+            )
+        except OSError as exc:
+            QMessageBox.critical(self, APP_NAME, f"Falha ao exportar SVG: {exc}")
+            return
+
+        self.statusBar().showMessage(f"SVG exportado em: {file_path}", 5000)
+
     def _show_about_dialog(self) -> None:
         QMessageBox.information(
             self,
             "Sobre",
-            "Verificador de Içamento - NBR 9062\\n"
+            f"Verificador de Içamento - NBR 9062\\n"
+            f"Versão {APP_VERSION}\\n"
             "Ferramenta para verificação de içamento com cordoalhas.",
         )
 

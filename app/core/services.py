@@ -184,7 +184,10 @@ class LiftingVerifierService:
             f"Cordoalha = {strand.label}",
             f"Inclinacao = {data.inclination_deg:.1f} graus",
             f"Ancoragem disponivel = {data.available_anchorage_cm:.2f} cm",
-            f"Tipo de ancoragem = {data.anchorage_type.value}  (alpha = {result.alpha_anchorage:.2f})",
+            (
+                f"Tipo de ancoragem = {data.anchorage_type.value}  "
+                f"(alpha = {result.alpha_anchorage:.2f})"
+            ),
             f"Condicao de aderencia = {data.bond_condition.value}",
             f"Quantidade de alcas = {data.loops_count}",
             f"Quantidade de pernas = {result.total_legs} ({LEGS_PER_LOOP} por alca)",
@@ -203,13 +206,13 @@ class LiftingVerifierService:
             "CALCULOS",
             "-" * 40,
             "",
-            "1) Massa da peca",
+            "1) Peso da peca",
             (
                 f"   gk = Volume x gamma_conc = {data.volume_m3:.3f} x "
                 f"{data.concrete_unit_weight_tf_m3:.3f} = {result.piece_weight_tf:.3f} tf"
             ),
             "",
-            "2) Massa majorada (NBR 9062)",
+            "2) Peso majorado (NBR 9062)",
             (
                 f"   ged = gk x Ba x yn = {result.piece_weight_tf:.3f} x "
                 f"{data.beta_a:.2f} x {data.gamma_n:.2f} = {result.majorated_weight_tf:.3f} tf"
@@ -298,7 +301,8 @@ class LiftingVerifierService:
             ),
             f"   Lnec,base = {result.base_anchorage_cm:.2f} cm",
             (
-                f"   Lnec = alpha x Lnec,base = {result.alpha_anchorage:.2f} x {result.base_anchorage_cm:.2f}"
+                f"   Lnec = alpha x Lnec,base = {result.alpha_anchorage:.2f}"
+                f" x {result.base_anchorage_cm:.2f}"
                 f" = {result.required_anchorage_cm:.2f} cm  [{data.anchorage_type.value}]"
             ),
             "",
@@ -317,18 +321,21 @@ class LiftingVerifierService:
             (
                 f"   Taxa de utilizacao = {result.utilization_ratio:.1%}"
             ),
-            (
-                f"   {'OK - Capacidade atende' if result.capacity_is_ok else 'NAO ATENDE - Capacidade insuficiente'}"
-            ),
+            "   OK - Capacidade atende"
+            if result.capacity_is_ok
+            else "   NAO ATENDE - Capacidade insuficiente",
             "",
             "b) Ancoragem:",
             f"   Tipo: {data.anchorage_type.value}  (alpha = {result.alpha_anchorage:.2f})",
-            f"   Lnec,base (reta) = {result.base_anchorage_cm:.2f} cm  (fbpd,28 = {result.fbpd_28_mpa:.3f} MPa)",
+            (
+                f"   Lnec,base (reta) = {result.base_anchorage_cm:.2f} cm"
+                f"  (fbpd,28 = {result.fbpd_28_mpa:.3f} MPa)"
+            ),
             f"   Lnec (com reducao) = {result.required_anchorage_cm:.2f} cm",
             f"   Ldisp = {data.available_anchorage_cm:.2f} cm",
-            (
-                f"   {'OK - Ancoragem atende' if result.anchorage_is_ok else 'NAO ATENDE - Ancoragem insuficiente'}"
-            ),
+            "   OK - Ancoragem atende"
+            if result.anchorage_is_ok
+            else "   NAO ATENDE - Ancoragem insuficiente",
             "",
             "c) Fator de seguranca global:",
             f"   FS = {result.safety_factor:.2f}",

@@ -5,7 +5,15 @@ from __future__ import annotations
 import math
 
 from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QFont,
+    QPaintEvent,
+    QPainter,
+    QPainterPath,
+    QPen,
+)
 from PySide6.QtWidgets import QWidget
 
 from app.core.models import AnchorageType
@@ -57,7 +65,7 @@ class LiftingSketchWidget(QWidget):
         self._available_anchorage_cm = max(0.0, available_anchorage_cm)
         self.update()
 
-    def paintEvent(self, event) -> None:  # noqa: N802
+    def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802
         p = QPainter(self)
         try:
             p.setRenderHint(QPainter.Antialiasing, True)
@@ -109,7 +117,7 @@ class LiftingSketchWidget(QWidget):
         n = self._loops_count
         cw = concrete.width()
         cl = concrete.left()
-        is_ok = self._anchorage_is_ok and getattr(self, '_capacity_is_ok', True)
+        is_ok = self._anchorage_is_ok and self._capacity_is_ok
         strand_color = _STRAND_OK_COLOR if is_ok else _STRAND_FAIL_COLOR
 
         margin = cw * 0.12
@@ -334,11 +342,23 @@ class LiftingSketchWidget(QWidget):
         status_text = "OK" if self._anchorage_is_ok else "INSUFICIENTE"
 
         p.setPen(QPen(_DIMENSION_COLOR, 1))
-        p.drawText(QRectF(area.left() + 10, area.top() + 4, area.width() - 20, 14), Qt.AlignLeft, required_text)
-        p.drawText(QRectF(area.left() + 10, area.top() + 18, area.width() - 20, 14), Qt.AlignLeft, available_text)
+        p.drawText(
+            QRectF(area.left() + 10, area.top() + 4, area.width() - 20, 14),
+            Qt.AlignLeft,
+            required_text,
+        )
+        p.drawText(
+            QRectF(area.left() + 10, area.top() + 18, area.width() - 20, 14),
+            Qt.AlignLeft,
+            available_text,
+        )
 
         p.setPen(QPen(_STRAND_OK_COLOR if self._anchorage_is_ok else _STRAND_FAIL_COLOR, 1))
-        p.drawText(QRectF(area.left() + 10, area.top() + 32, area.width() - 20, 14), Qt.AlignLeft, f"Status: {status_text}")
+        p.drawText(
+            QRectF(area.left() + 10, area.top() + 32, area.width() - 20, 14),
+            Qt.AlignLeft,
+            f"Status: {status_text}",
+        )
 
     def _draw_labels(self, p: QPainter, area: QRectF, concrete: QRectF) -> None:
         font = QFont()
@@ -369,19 +389,19 @@ class LiftingSketchWidget(QWidget):
         )
 
         legend_rect = QRectF(area.left(), area.bottom() - 30, area.width(), 12)
-        is_ok = self._anchorage_is_ok and getattr(self, '_capacity_is_ok', True)
+        is_ok = self._anchorage_is_ok and self._capacity_is_ok
         p.setPen(QPen(_STRAND_OK_COLOR if is_ok else _STRAND_FAIL_COLOR, 1))
-        
+
         if is_ok:
             legend_text = "Cordoalha: OK"
         else:
-            if not getattr(self, '_capacity_is_ok', True) and not self._anchorage_is_ok:
+            if not self._capacity_is_ok and not self._anchorage_is_ok:
                 legend_text = "Cordoalha: Cap. e Anc. insuficientes"
-            elif not getattr(self, '_capacity_is_ok', True):
+            elif not self._capacity_is_ok:
                 legend_text = "Cordoalha: Capacidade insuficiente"
             else:
                 legend_text = "Cordoalha: Ancoragem insuficiente"
-                
+
         p.drawText(legend_rect, Qt.AlignLeft | Qt.AlignBottom, legend_text)
 
         hook_x = area.left() + area.width() / 2

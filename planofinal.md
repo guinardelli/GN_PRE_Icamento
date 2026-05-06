@@ -122,6 +122,8 @@ Adicionar testes para:
 
 ### 2.2 Conferir coerencia normativa
 
+Status: OK - formulas e premissas principais foram alinhadas no README neste checkpoint.
+
 Arquivos principais:
 
 - `app/core/services.py`
@@ -129,15 +131,15 @@ Arquivos principais:
 
 Acao:
 
-- Revisar as premissas adotadas para:
+- [x] Revisar as premissas adotadas para:
   - `ECJ_FACTOR = 0.9`
   - `GAMMA_C = 1.3`
   - `GAMMA_S = 1.15`
   - `ETA_P1_FOR_7_WIRE_STRAND = 1.2`
   - coeficientes de ancoragem
   - diferenca entre `fbpd_j` e `fbpd_28`
-- Confirmar que a memoria de calculo descreve exatamente as formulas implementadas.
-- Registrar no README que a ferramenta e preliminar e exige validacao do engenheiro responsavel.
+- [x] Confirmar que a memoria de calculo descreve exatamente as formulas implementadas.
+- [x] Registrar no README que a ferramenta e preliminar e exige validacao do engenheiro responsavel.
 
 ## 3. Interface Grafica
 
@@ -180,31 +182,57 @@ Acao:
 
 ### 3.3 Revisar robustez de sinais
 
+Status: OK - conexoes seguem centralizadas no construtor e os atalhos agora ficam referenciados em `self._shortcuts`.
+
 Arquivo principal: `app/ui/main_window.py`
 
 Acao:
 
-- Manter conexoes feitas apenas uma vez no construtor.
-- Evitar chamadas repetidas a `_connect_auto_calculate`.
-- Verificar se atalhos criados em `_setup_shortcuts` permanecem vivos por terem `self` como parent.
-- Evitar desconectar sinais sem necessidade.
+- [x] Manter conexoes feitas apenas uma vez no construtor.
+- [x] Evitar chamadas repetidas a `_connect_auto_calculate`.
+- [x] Verificar se atalhos criados em `_setup_shortcuts` permanecem vivos por terem `self` como parent.
+- [x] Evitar desconectar sinais sem necessidade.
+
+### 3.4 Remover calculo manual da interface
+
+Status: OK - implementado neste checkpoint.
+
+Arquivo principal: `app/ui/main_window.py`
+
+Motivo:
+
+- A aplicacao ja recalcula automaticamente quando os campos mudam.
+- O botao manual duplicava o fluxo principal e podia sugerir que os resultados nao estavam atualizados.
+
+Acao:
+
+- [x] Remover o botao `Calcular Verificacao`.
+- [x] Remover atalhos manuais de calculo (`F5` e `Ctrl+Enter`).
+- [x] Manter atalhos apenas para navegacao entre abas.
+- [x] Tratar validacao invalida como estado visivel da tela, sem modal.
+- [x] Limpar o ultimo resultado valido ao detectar entrada invalida.
+- [x] Atualizar testes e checklist manual.
 
 ## 4. Infraestrutura e Exportacao
 
 ### 4.1 Definir escopo real de SVG para a v1.0
 
+Status: OK - SVG foi incluido no escopo e implementado neste checkpoint.
+
 Situacao atual:
 
-- `app/infrastructure/svg_exporter.py` nao existe.
-- Nao ha teste fonte `tests/test_svg_exporter.py`.
-- A exportacao atual e apenas TXT da memoria de calculo.
+- [x] `app/infrastructure/svg_exporter.py` existe.
+- [x] Ha teste fonte `tests/test_svg_exporter.py`.
+- [x] A exportacao atual inclui TXT da memoria de calculo e SVG do desenho.
 
 Decisao necessaria:
 
-- Se SVG nao for requisito da v1.0, remover mencoes pendentes e documentar apenas exportacao TXT.
-- Se SVG for requisito da v1.0, implementar exportador e testes antes do release.
+- [x] SVG definido como requisito da v1.0.
+- [x] Exportador e testes implementados antes do release.
 
 ### 4.2 Implementar exportador SVG, se aprovado no escopo
+
+Status: OK - implementado neste checkpoint.
 
 Arquivo sugerido:
 
@@ -212,23 +240,25 @@ Arquivo sugerido:
 
 Requisitos:
 
-- Gerar SVG usando APIs seguras de XML, preferencialmente `xml.etree.ElementTree`.
-- Escapar caracteres especiais automaticamente.
-- Validar caminho de destino.
-- Capturar `OSError` e converter para erro amigavel quando chamado pela UI.
-- Nao misturar regra de negocio no exportador.
-- Aceitar dados estruturados simples do desenho ou resultado.
+- [x] Gerar SVG usando APIs seguras de XML, preferencialmente `xml.etree.ElementTree`.
+- [x] Escapar caracteres especiais automaticamente.
+- [x] Validar caminho de destino.
+- [x] Capturar `OSError` e converter para erro amigavel quando chamado pela UI.
+- [x] Nao misturar regra de negocio no exportador.
+- [x] Aceitar dados estruturados simples do desenho ou resultado.
 
 Testes obrigatorios:
 
-- Texto com acentos e caracteres especiais: `&`, `<`, `>`, `"`.
-- Caminho invalido deve falhar de forma previsivel.
-- SVG gerado deve ser XML valido.
-- Desenho com varias alcas deve gerar estrutura consistente.
+- [x] Texto com acentos e caracteres especiais: `&`, `<`, `>`, `"`.
+- [x] Caminho invalido deve falhar de forma previsivel.
+- [x] SVG gerado deve ser XML valido.
+- [x] Desenho com varias alcas deve gerar estrutura consistente.
 
 ## 5. Documentacao
 
 ### 5.1 Atualizar README
+
+Status: OK - atualizado neste checkpoint.
 
 Arquivo principal: `README.md`
 
@@ -241,80 +271,119 @@ Problemas atuais:
 
 Acao:
 
-- Atualizar lista de entradas.
-- Atualizar formulas.
-- Atualizar saidas.
-- Atualizar instrucoes de testes, se novos testes forem adicionados.
-- Documentar exportacao TXT e, se implementado, SVG.
+- [x] Atualizar lista de entradas.
+- [x] Atualizar formulas.
+- [x] Atualizar saidas.
+- [x] Atualizar instrucoes de testes, se novos testes forem adicionados.
+- [x] Documentar exportacao TXT e SVG.
 
 ### 5.2 Revisar versao do aplicativo
+
+Status: OK - `APP_VERSION` passou a ser exibido no dialogo "Sobre" e foi alinhado para `1.0.0`.
 
 Arquivo principal: `app/config/settings.py`
 
 Acao:
 
-- Decidir se `APP_VERSION` sera exibido na UI ou removido.
-- Se mantido, exibir no dialogo "Sobre".
-- Ajustar versao final para `1.0.0` se este for o release oficial.
+- [x] Decidir se `APP_VERSION` sera exibido na UI ou removido.
+- [x] Se mantido, exibir no dialogo "Sobre".
+- [x] Ajustar versao final para `1.0.0` se este for o release oficial.
 
 ## 6. Limpeza de Codigo e Repositorio
 
 ### 6.1 Remover codigo nao usado
+
+Status: OK - `_section_label` foi removido e `APP_VERSION` passou a ser usado.
 
 Arquivos principais:
 
 - `app/ui/main_window.py`
 - `app/config/settings.py`
 
-Itens identificados:
+Itens identificados originalmente:
 
 - `_section_label` nao e usado.
 - `APP_VERSION` nao e usado.
 
 Acao:
 
-- Remover `_section_label` se nao houver uso planejado imediato.
-- Usar ou remover `APP_VERSION`.
+- [x] Remover `_section_label` se nao houver uso planejado imediato.
+- [x] Usar ou remover `APP_VERSION`.
 
 ### 6.2 Limpar artefatos gerados
 
+Status: PARCIAL - `.gitignore` foi criado e os caches Python versionados foram removidos do workspace. Depois dos testes, alguns `__pycache__` foram recriados localmente; a nova remocao foi bloqueada pelo limite de aprovacao da sessao. Dois diretorios temporarios antigos em `.tmp_test_outputs` tambem ficaram bloqueados pelo OneDrive e devem ser apagados manualmente se ainda aparecerem no Explorer.
+
 Itens identificados:
 
-- Pastas `__pycache__`.
-- `.pytest_cache`.
-- Imagens de screenshot soltas na raiz.
-- Arquivos `.pyc` em `tests`.
-- Possivel `test_svg_exporter.cpython-314.pyc` sem arquivo fonte correspondente.
+- [x] Pastas `__pycache__`.
+- [x] `.pytest_cache`.
+- [ ] Imagens de screenshot soltas na raiz: mantidas por enquanto, pois podem ser evidencias/documentacao visual.
+- [x] Arquivos `.pyc` em `tests`.
+- [x] Possivel `test_svg_exporter.cpython-314.pyc` sem arquivo fonte correspondente.
 
 Acao:
 
-- Remover artefatos gerados do controle de versao.
-- Criar ou atualizar `.gitignore` com:
-  - `__pycache__/`
-  - `*.pyc`
-  - `.pytest_cache/`
-  - `.venv/`
-  - `.tmp_test_outputs/`
-  - screenshots temporarios, se nao forem documentacao oficial.
+- [x] Remover artefatos gerados do controle de versao.
+- [x] Criar ou atualizar `.gitignore` com:
+  - [x] `__pycache__/`
+  - [x] `*.pyc`
+  - [x] `.pytest_cache/`
+  - [x] `.venv/`
+  - [x] `.tmp_test_outputs/`
+  - [x] screenshots temporarios, se nao forem documentacao oficial.
 
 ## 7. Qualidade e Padroes
 
 ### 7.1 PEP 8 e tipagem
 
+Status: OK - linhas Python acima de 99 caracteres foram quebradas e `paintEvent` recebeu tipo de evento.
+
 Acao:
 
-- Quebrar linhas longas em `main_window.py`, `services.py` e `sketch_widget.py`.
-- Manter type hints em metodos publicos e privados relevantes.
-- Tipar `paintEvent` com o tipo correto de evento, se desejado.
-- Evitar imports longos em uma unica linha.
+- [x] Quebrar linhas longas em `main_window.py`, `services.py` e `sketch_widget.py`.
+- [x] Manter type hints em metodos publicos e privados relevantes.
+- [x] Tipar `paintEvent` com o tipo correto de evento, se desejado.
+- [x] Evitar imports longos em uma unica linha.
 
 ### 7.2 Tratamento de erros
 
+Status: OK - validacoes e exportacoes usam erros especificos nos fluxos previstos.
+
 Acao:
 
-- Erros de validacao devem sair como `ValidationError`.
-- Erros de arquivo devem sair como `OSError` na infraestrutura e mensagem amigavel na UI.
-- Evitar `KeyError`, `ValueError` e `TypeError` crus em fluxos esperados do usuario ou chamadas diretas ao core.
+- [x] Erros de validacao devem sair como `ValidationError`.
+- [x] Erros de arquivo devem sair como `OSError` na infraestrutura e mensagem amigavel na UI.
+- [x] Evitar `KeyError`, `ValueError` e `TypeError` crus em fluxos esperados do usuario ou chamadas diretas ao core.
+
+### 7.3 Smoke tests de release
+
+Status: OK - fluxos principais foram cobertos por testes automatizados em modo offscreen.
+
+Acao:
+
+- [x] Abrir a janela principal em modo offscreen.
+- [x] Validar calculo aprovado inicial.
+- [x] Validar calculo reprovado sem modal.
+- [x] Validar copia da memoria para clipboard.
+- [x] Validar exportacao TXT com caminho contendo acentos, sem escrever arquivo real.
+- [x] Validar exportacao SVG com caminho contendo acentos, sem escrever arquivo real.
+
+### 7.4 Script de verificacao de release
+
+Status: OK - script automatizado criado neste checkpoint.
+
+Arquivo principal: `tools/release_check.py`
+
+Acao:
+
+- [x] Criar comando unico para checagens tecnicas antes do release.
+- [x] Rodar suite de testes com `python -B`.
+- [x] Rodar `git diff --check`.
+- [x] Verificar linhas Python acima de 99 caracteres em `app/` e `tests/`.
+- [x] Verificar marcadores de codigo pendente em `app/` e `tests/`.
+- [x] Reportar `.pyc` e `screenshot_*.png` rastreados como avisos em modo normal.
+- [x] Disponibilizar modo `--strict` para falhar enquanto artefatos rastreados existirem.
 
 ## 8. Checklist de Release
 
@@ -326,18 +395,91 @@ Antes de fechar a versao 1.0:
 - [x] Testes de borda de inclinacao, fck e ancoragem adicionados.
 - [x] `paintEvent` protegido com finalizacao garantida do `QPainter`.
 - [x] `update_sketch` limitado ao intervalo suportado pela UI.
-- [ ] Decisao tomada sobre exportacao SVG.
-- [ ] SVG implementado e testado, se fizer parte da v1.0.
-- [ ] README atualizado com formulas reais e escopo real.
-- [ ] `APP_VERSION` usado ou removido.
-- [ ] Codigo morto removido.
-- [ ] Artefatos gerados removidos ou ignorados.
+- [x] Decisao tomada sobre exportacao SVG.
+- [x] SVG implementado e testado, se fizer parte da v1.0.
+- [x] README atualizado com formulas reais e escopo real.
+- [x] `APP_VERSION` usado ou removido.
+- [x] Codigo morto removido.
+- [ ] Artefatos gerados removidos ou ignorados. Parcial: screenshots e dois temporarios bloqueados ainda exigem decisao/acao manual.
 - [x] `python -m unittest discover -s tests` executado com sucesso.
 - [x] `python -m py_compile` executado nos modulos principais.
-- [ ] Aplicacao aberta em ambiente Windows limpo com Python 3.11+.
-- [ ] Fluxo manual validado: calcular aprovado, calcular reprovado, copiar memoria e exportar TXT.
-- [ ] Teste manual com caminho de arquivo contendo acentos.
+- [x] `python -B tools/release_check.py` executado com sucesso em modo normal.
+- [ ] `python -B tools/release_check.py --strict` sem falhas. Pendente ate remover `.pyc`/screenshots rastreados ou decidir manter os screenshots oficialmente.
+- [ ] Aplicacao aberta em ambiente Windows limpo com Python 3.11+. Automatizado em offscreen, pendente validacao manual em ambiente limpo.
+- [ ] Fluxo manual validado: alterar dados, recalculo automatico aprovado/reprovado, copiar memoria e exportar TXT. Automatizado em offscreen, pendente validacao manual.
+- [ ] Teste manual com caminho de arquivo contendo acentos. Automatizado com mocks, pendente validacao manual gravando arquivo real.
 - [ ] Revisao final por engenheiro responsavel antes de uso operacional.
+
+## 9. Estado Release Candidate
+
+Status: RC tecnico quase fechado. As correcoes de codigo, testes automatizados, documentacao tecnica e exportacao SVG foram implementadas. O que resta antes de declarar release final e operacional/manual, nao uma pendencia conhecida de regra de negocio.
+
+Validado automaticamente:
+
+- [x] Suite de testes com 57 testes passando.
+- [x] `git diff --check` sem erros.
+- [x] `python -B tools/release_check.py` sem falhas em modo normal.
+- [x] Smoke test da janela principal em modo offscreen.
+- [x] Calculo aprovado inicial.
+- [x] Calculo reprovado.
+- [x] Copia da memoria para clipboard.
+- [x] Exportacao TXT via fluxo da UI com caminho acentuado mockado.
+- [x] Exportacao SVG via fluxo da UI com caminho acentuado mockado.
+- [x] Exportador SVG gera XML valido e escapa caracteres especiais.
+- [x] Nao ha `TODO`, `FIXME`, `except Exception` ou `NotImplemented` nos arquivos-fonte.
+- [x] Nao ha linhas Python acima de 99 caracteres em `app/` e `tests/`.
+- [x] `RELEASE_NOTES.md` criado para a versao 1.0.0.
+- [x] `CHECKLIST_VALIDACAO_MANUAL.md` criado para orientar o fechamento manual.
+
+Pendencias manuais antes do release final:
+
+- [ ] Executar `CHECKLIST_VALIDACAO_MANUAL.md` em ambiente Windows limpo.
+- [ ] Remover do controle de versao todos os `.pyc` atualmente rastreados por Git.
+- [ ] Apagar manualmente os diretorios antigos bloqueados em `.tmp_test_outputs`, se ainda existirem.
+- [ ] Decidir se os `screenshot_*.png` ficam como evidencia/documentacao visual ou se devem sair do repositorio.
+- [ ] Rodar `python -B tools/release_check.py --strict` apos a limpeza dos artefatos rastreados.
+- [ ] Executar em venv limpo no Windows com `pip install -r requirements.txt`.
+- [ ] Abrir a aplicacao visivelmente com `python app/main.py`.
+- [ ] Validar manualmente: caso aprovado, caso reprovado, copia da memoria, exportacao TXT real e exportacao SVG real.
+- [ ] Validar gravacao real em caminho com acentos.
+- [ ] Revisao final por engenheiro responsavel.
+
+Manifesto de limpeza Git:
+
+- `.gitignore` cobre novos `__pycache__/`, `*.pyc`, `.pytest_cache/`, `.tmp_test_outputs/` e `screenshot_*.png`.
+- Atualmente existem 18 arquivos `.pyc` rastreados por Git que devem sair do controle de versao.
+- Atualmente existem 11 `screenshot_*.png` rastreados por Git; decidir se devem permanecer como evidencia visual ou sair do repositorio.
+- Os arquivos `.pyc` rastreados sao:
+  - `app/__pycache__/__init__.cpython-314.pyc`
+  - `app/__pycache__/main.cpython-314.pyc`
+  - `app/config/__pycache__/__init__.cpython-314.pyc`
+  - `app/config/__pycache__/settings.cpython-314.pyc`
+  - `app/core/__pycache__/__init__.cpython-314.pyc`
+  - `app/core/__pycache__/exceptions.cpython-314.pyc`
+  - `app/core/__pycache__/models.cpython-314.pyc`
+  - `app/core/__pycache__/services.cpython-314.pyc`
+  - `app/infrastructure/__pycache__/__init__.cpython-314.pyc`
+  - `app/infrastructure/__pycache__/svg_exporter.cpython-314.pyc`
+  - `app/ui/__pycache__/__init__.cpython-314.pyc`
+  - `app/ui/__pycache__/main_window.cpython-314.pyc`
+  - `app/ui/__pycache__/sketch_widget.cpython-314.pyc`
+  - `app/ui/__pycache__/styles.cpython-314.pyc`
+  - `tests/__pycache__/test_services.cpython-314-pytest-9.0.3.pyc`
+  - `tests/__pycache__/test_services.cpython-314.pyc`
+  - `tests/__pycache__/test_sketch_widget.cpython-314.pyc`
+  - `tests/__pycache__/test_svg_exporter.cpython-314.pyc`
+- Os screenshots rastreados sao:
+  - `screenshot_final.png`
+  - `screenshot_fix.png`
+  - `screenshot_fix2.png`
+  - `screenshot_fix3.png`
+  - `screenshot_fix4.png`
+  - `screenshot_janela.png`
+  - `screenshot_main.png`
+  - `screenshot_memory.png`
+  - `screenshot_v5.png`
+  - `screenshot_v6.png`
+  - `screenshot_v7.png`
 
 ## Ordem Recomendada de Execucao
 

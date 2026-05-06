@@ -56,7 +56,10 @@ def base_style() -> str:
         border: 1px solid #0078d7;
         background-color: #ffffff;
     }
-    QLineEdit[invalid="true"], QDoubleSpinBox[invalid="true"], QSpinBox[invalid="true"], QComboBox[invalid="true"] {
+    QLineEdit[invalid="true"],
+    QDoubleSpinBox[invalid="true"],
+    QSpinBox[invalid="true"],
+    QComboBox[invalid="true"] {
         border: 1px solid #c62828;
         background-color: #fff0f0;
     }
