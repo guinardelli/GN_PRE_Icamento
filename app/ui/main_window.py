@@ -103,9 +103,6 @@ class MainWindow(QMainWindow):
         outer.setSpacing(6)
         outer.setContentsMargins(0, 0, 0, 0)
 
-        self.piece_id_input = QLineEdit()
-        self.piece_id_input.setPlaceholderText("Ex.: VIGA P1 - LOTE 03")
-
         self.fckj_input = QDoubleSpinBox()
         self.fckj_input.setButtonSymbols(QDoubleSpinBox.NoButtons)
         self.fckj_input.setRange(5.0, 120.0)
@@ -124,6 +121,7 @@ class MainWindow(QMainWindow):
         self.volume_input.setButtonSymbols(QDoubleSpinBox.NoButtons)
         self.volume_input.setRange(0.01, 1000.0)
         self.volume_input.setDecimals(3)
+        self.volume_input.setSingleStep(0.1)
         self.volume_input.setValue(1.0)
         self.volume_input.setSuffix(" m³")
 
@@ -167,6 +165,7 @@ class MainWindow(QMainWindow):
             self.anchorage_type_input.setCurrentIndex(hook90_index)
 
         self.loops_input = QSpinBox()
+        self.loops_input.setButtonSymbols(QSpinBox.NoButtons)
         self.loops_input.setRange(1, 20)
         self.loops_input.setValue(2)
 
@@ -183,7 +182,6 @@ class MainWindow(QMainWindow):
         self.gamma_n_input.setValue(1.30)
 
         for widget in (
-            self.piece_id_input,
             self.fckj_input, self.fck_28_input,
             self.volume_input, self.unit_weight_input,
             self.strand_input, self.inclination_input, self.loops_input,
@@ -197,7 +195,6 @@ class MainWindow(QMainWindow):
         calculate_button.clicked.connect(lambda: self._on_calculate(show_errors=True))
 
         piece_group, piece_form = self._new_form_group("Peça")
-        piece_form.addRow("Identificação", self.piece_id_input)
         piece_form.addRow("Volume", self.volume_input)
         piece_form.addRow("Peso específico", self.unit_weight_input)
 
@@ -358,9 +355,6 @@ class MainWindow(QMainWindow):
         help_menu.addAction(about_action)
 
     def _configure_input_metadata(self) -> None:
-        self.piece_id_input.setToolTip(
-            "Identificação opcional da peça para rastreabilidade da memória de cálculo."
-        )
         self.fckj_input.setToolTip(
             "Resistência característica do concreto na idade do içamento (MPa). "
             "Valor típico: 15 a 25 MPa."
@@ -383,7 +377,6 @@ class MainWindow(QMainWindow):
             "Coeficiente de majoração adicional. Padrão: 1,30."
         )
 
-        self.piece_id_input.setAccessibleName("Identificação da peça")
         self.fckj_input.setAccessibleName("Fck na idade de içamento em MPa")
         self.fck_28_input.setAccessibleName("Fck aos 28 dias em MPa")
         self.volume_input.setAccessibleName("Volume da peça em metros cúbicos")
@@ -411,7 +404,6 @@ class MainWindow(QMainWindow):
             spinbox.valueChanged.connect(self._on_auto_calculate)
 
         self.loops_input.valueChanged.connect(self._on_auto_calculate)
-        self.piece_id_input.textChanged.connect(self._on_auto_calculate)
         self.strand_input.currentIndexChanged.connect(self._on_auto_calculate)
         self.bond_input.currentIndexChanged.connect(self._on_auto_calculate)
         self.anchorage_type_input.currentIndexChanged.connect(self._on_auto_calculate)
@@ -423,7 +415,6 @@ class MainWindow(QMainWindow):
         QShortcut(QKeySequence("Ctrl+2"), self, lambda: self.tabs.setCurrentIndex(1))
 
     def _set_tab_order(self) -> None:
-        QWidget.setTabOrder(self.piece_id_input, self.fckj_input)
         QWidget.setTabOrder(self.fckj_input, self.fck_28_input)
         QWidget.setTabOrder(self.fck_28_input, self.volume_input)
         QWidget.setTabOrder(self.volume_input, self.unit_weight_input)
@@ -506,7 +497,7 @@ class MainWindow(QMainWindow):
             loops_count=self.loops_input.value(),
             beta_a=self.beta_a_input.value(),
             gamma_n=self.gamma_n_input.value(),
-            piece_id=self.piece_id_input.text().strip(),
+            piece_id="",
         )
 
     def _update_result_fields(
@@ -580,7 +571,6 @@ class MainWindow(QMainWindow):
             self.anchorage_input.setToolTip("Comprimento de ancoragem disponível em centímetros.")
 
     def _restore_defaults(self) -> None:
-        self.piece_id_input.clear()
         self.fckj_input.setValue(15.0)
         self.fck_28_input.setValue(40.0)
         self.volume_input.setValue(1.0)
@@ -613,12 +603,6 @@ class MainWindow(QMainWindow):
             return
 
         suggested_name = "memoria_calculo.txt"
-        if self.piece_id_input.text().strip():
-            safe_piece = "".join(
-                char if char.isalnum() or char in ("-", "_") else "_"
-                for char in self.piece_id_input.text().strip()
-            )
-            suggested_name = f"memoria_{safe_piece}.txt"
 
         file_path, _ = QFileDialog.getSaveFileName(
             self,

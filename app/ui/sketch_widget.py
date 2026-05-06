@@ -20,6 +20,7 @@ _BG_COLOR = QColor("#ffffff")
 _SURFACE_COLOR = QColor("#64748b")
 _HOOK_POINT_COLOR = QColor("#0f172a")
 _DIMENSION_COLOR = QColor("#1d4ed8")
+_MAX_LOOPS = 20
 
 
 class LiftingSketchWidget(QWidget):
@@ -31,6 +32,7 @@ class LiftingSketchWidget(QWidget):
         self._anchorage_type: AnchorageType = AnchorageType.STRAIGHT
         self._inclination_deg: float = 60.0
         self._anchorage_is_ok: bool = True
+        self._capacity_is_ok: bool = True
         self._required_anchorage_cm: float = 0.0
         self._available_anchorage_cm: float = 0.0
         self.setMinimumSize(260, 220)
@@ -46,7 +48,7 @@ class LiftingSketchWidget(QWidget):
         available_anchorage_cm: float = 0.0,
     ) -> None:
         """Update sketch parameters and trigger repaint."""
-        self._loops_count = max(1, loops_count)
+        self._loops_count = min(_MAX_LOOPS, max(1, loops_count))
         self._anchorage_type = anchorage_type
         self._inclination_deg = max(5.0, min(90.0, inclination_deg))
         self._anchorage_is_ok = anchorage_is_ok
@@ -57,27 +59,30 @@ class LiftingSketchWidget(QWidget):
 
     def paintEvent(self, event) -> None:  # noqa: N802
         p = QPainter(self)
-        p.setRenderHint(QPainter.Antialiasing, True)
+        try:
+            p.setRenderHint(QPainter.Antialiasing, True)
 
-        area = self.rect().adjusted(6, 6, -6, -6)
-        p.fillRect(area, _BG_COLOR)
+            area = self.rect().adjusted(6, 6, -6, -6)
+            if area.width() <= 0 or area.height() <= 0:
+                return
+            p.fillRect(area, _BG_COLOR)
 
-        w = area.width()
-        h = area.height()
+            w = area.width()
+            h = area.height()
 
-        concrete = QRectF(
-            area.left() + w * 0.10,
-            area.top() + h * 0.42,
-            w * 0.80,
-            h * 0.46,
-        )
+            concrete = QRectF(
+                area.left() + w * 0.10,
+                area.top() + h * 0.42,
+                w * 0.80,
+                h * 0.46,
+            )
 
-        self._draw_concrete(p, concrete)
-        self._draw_loops_and_slings(p, area, concrete)
-        self._draw_anchorage_dimensions(p, area, concrete)
-        self._draw_labels(p, area, concrete)
-
-        p.end()
+            self._draw_concrete(p, concrete)
+            self._draw_loops_and_slings(p, area, concrete)
+            self._draw_anchorage_dimensions(p, area, concrete)
+            self._draw_labels(p, area, concrete)
+        finally:
+            p.end()
 
     def _draw_concrete(self, p: QPainter, rect: QRectF) -> None:
         p.setPen(QPen(_CONCRETE_BORDER, 2))

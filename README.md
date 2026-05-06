@@ -44,13 +44,14 @@ Saidas:
 - `Ecj = 5600 * sqrt(fck,j)`
 - `fctm = 0,3 * fck^(2/3)` (fck <= 50 MPa)
 - `fctk,inf = 0,7 * fctm`
-- `fctd = fctk,inf / gamma_c`, com `gamma_c = 1,4`
+- `fctd = fctk,inf / gamma_c`, com `gamma_c = 1,3`
 - `fpyk = 1710 MPa` e `fptk = 1900 MPa` para CP 190-RB
 - `fpyd = fpyk / gamma_s`, com `gamma_s = 1,15`
 - `fbpd = eta_p1 * eta_p2 * fctd`, com `eta_p1 = 1,2` (cordoalha 7 fios), `eta_p2 = 1,0` (boa) ou `0,7` (ma)
 - Carga em cada alca: `T = ged / (n_alcas * sen(inclinacao))`
 - Comprimento de ancoragem necessario:
   `Lnec = T / (fbpd * pi * diametro)`
+- Areas e massas das cordoalhas CP 190-RB: valores nominais conforme ABNT NBR 7483:2021.
 
 ## Importante
 

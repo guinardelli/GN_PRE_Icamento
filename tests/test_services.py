@@ -6,7 +6,7 @@ import math
 import unittest
 
 from app.core.exceptions import ValidationError
-from app.core.models import AnchorageType, BondCondition, LiftingInput
+from app.core.models import AnchorageType, BondCondition, LiftingInput, STRAND_SPECS
 from app.core.services import (
     GAMMA_C,
     GAMMA_S,
@@ -70,6 +70,18 @@ class LiftingVerifierServiceTests(unittest.TestCase):
         expected_fctm = 0.3 * (30.0 ** (2.0 / 3.0))
         self.assertAlmostEqual(result.fctm_j_mpa, expected_fctm, places=4)
 
+    def test_fctm_j_formula_at_50_mpa_boundary(self) -> None:
+        data = self._default_input(fckj_mpa=50.0, fck_28_mpa=50.0)
+        result = self.service.calculate(data)
+        expected_fctm = 0.3 * (50.0 ** (2.0 / 3.0))
+        self.assertAlmostEqual(result.fctm_j_mpa, expected_fctm, places=4)
+
+    def test_fctm_j_formula_above_50_uses_logarithmic_expression(self) -> None:
+        data = self._default_input(fckj_mpa=60.0, fck_28_mpa=60.0)
+        result = self.service.calculate(data)
+        expected_fctm = 2.12 * math.log1p(0.11 * 60.0)
+        self.assertAlmostEqual(result.fctm_j_mpa, expected_fctm, places=4)
+
     def test_fctm_28_uses_fck_28(self) -> None:
         data = self._default_input(fck_28_mpa=45.0)
         result = self.service.calculate(data)
@@ -79,6 +91,20 @@ class LiftingVerifierServiceTests(unittest.TestCase):
     def test_fpyd_formula(self) -> None:
         result = self.service.calculate(self._default_input())
         self.assertAlmostEqual(result.fpyd_mpa, 1710.0 / GAMMA_S, places=2)
+
+    def test_default_concrete_coefficient(self) -> None:
+        self.assertAlmostEqual(GAMMA_C, 1.30)
+
+    def test_strand_nominal_cross_section_areas_follow_nbr_7483(self) -> None:
+        expected_areas_mm2 = {
+            "CP 190-RB 9,5 mm": 56.2,
+            "CP 190-RB 12,7 mm": 100.9,
+            "CP 190-RB 15,2 mm": 143.4,
+        }
+
+        for strand_key, expected_area in expected_areas_mm2.items():
+            with self.subTest(strand_key=strand_key):
+                self.assertAlmostEqual(STRAND_SPECS[strand_key].area_mm2, expected_area)
 
     def test_dual_age_fbpd(self) -> None:
         """fbpd_j uses fckj, fbpd_28 uses fck_28. fck_28 > fckj => fbpd_28 > fbpd_j."""
@@ -128,6 +154,12 @@ class LiftingVerifierServiceTests(unittest.TestCase):
         result = self.service.calculate(data)
         self.assertGreater(result.max_supported_load_tf, 0.0)
 
+    def test_inclination_lower_limit_is_valid(self) -> None:
+        data = self._default_input(inclination_deg=0.1)
+        result = self.service.calculate(data)
+        self.assertGreater(result.tension_per_loop_tf, 0.0)
+        self.assertTrue(math.isfinite(result.tension_per_loop_tf))
+
     def test_utilization_ratio_and_safety_factor(self) -> None:
         result = self.service.calculate(self._default_input())
         expected_util = result.majorated_weight_tf / result.max_supported_load_tf
@@ -155,9 +187,127 @@ class LiftingVerifierServiceTests(unittest.TestCase):
         self.assertFalse(result.capacity_is_ok)
         self.assertGreater(result.utilization_ratio, 1.0)
 
+    def test_steel_governs_when_bond_capacity_is_higher(self) -> None:
+        result = self.service.calculate(
+            self._default_input(
+                volume_m3=0.05,
+                loops_count=20,
+                available_anchorage_cm=500.0,
+            )
+        )
+        self.assertLessEqual(
+            result.max_supported_load_by_steel_tf,
+            result.max_supported_load_by_bond_tf,
+        )
+        self.assertAlmostEqual(
+            result.max_supported_load_tf,
+            result.max_supported_load_by_steel_tf,
+            places=4,
+        )
+
+    def test_bond_governs_when_available_anchorage_is_low(self) -> None:
+        result = self.service.calculate(
+            self._default_input(
+                volume_m3=0.05,
+                loops_count=20,
+                available_anchorage_cm=1.0,
+            )
+        )
+        self.assertLess(
+            result.max_supported_load_by_bond_tf,
+            result.max_supported_load_by_steel_tf,
+        )
+        self.assertAlmostEqual(
+            result.max_supported_load_tf,
+            result.max_supported_load_by_bond_tf,
+            places=4,
+        )
+
+    def test_capacity_can_fail_while_anchorage_passes(self) -> None:
+        result = self.service.calculate(
+            self._default_input(
+                volume_m3=100.0,
+                loops_count=20,
+                available_anchorage_cm=500.0,
+            )
+        )
+        self.assertFalse(result.capacity_is_ok)
+        self.assertTrue(result.anchorage_is_ok)
+
+    def test_capacity_and_anchorage_can_both_fail(self) -> None:
+        result = self.service.calculate(
+            self._default_input(
+                volume_m3=100.0,
+                loops_count=1,
+                available_anchorage_cm=1.0,
+            )
+        )
+        self.assertFalse(result.capacity_is_ok)
+        self.assertFalse(result.anchorage_is_ok)
+
+    def test_failed_anchorage_also_fails_capacity_in_current_model(self) -> None:
+        result = self.service.calculate(
+            self._default_input(
+                volume_m3=5.0,
+                loops_count=20,
+                available_anchorage_cm=5.0,
+            )
+        )
+        self.assertFalse(result.anchorage_is_ok)
+        self.assertFalse(result.capacity_is_ok)
+
     def test_invalid_volume_raises(self) -> None:
         with self.assertRaises(ValidationError):
             self.service.calculate(self._default_input(volume_m3=0.0))
+
+    def test_invalid_positive_numeric_inputs_raise(self) -> None:
+        invalid_cases = (
+            ("fckj_mpa", 0.0),
+            ("fck_28_mpa", 0.0),
+            ("volume_m3", 0.0),
+            ("concrete_unit_weight_tf_m3", 0.0),
+            ("available_anchorage_cm", 0.0),
+            ("beta_a", 0.0),
+            ("beta_a", -1.0),
+            ("gamma_n", 0.0),
+            ("gamma_n", -1.0),
+            ("loops_count", 0),
+            ("loops_count", -1),
+        )
+
+        for field_name, value in invalid_cases:
+            with self.subTest(field_name=field_name, value=value):
+                with self.assertRaises(ValidationError):
+                    self.service.calculate(self._default_input(**{field_name: value}))
+
+    def test_non_finite_numeric_inputs_raise(self) -> None:
+        numeric_fields = (
+            "fckj_mpa",
+            "fck_28_mpa",
+            "volume_m3",
+            "concrete_unit_weight_tf_m3",
+            "inclination_deg",
+            "available_anchorage_cm",
+            "beta_a",
+            "gamma_n",
+        )
+        invalid_values = (float("nan"), float("inf"), float("-inf"))
+
+        for field_name in numeric_fields:
+            for value in invalid_values:
+                with self.subTest(field_name=field_name, value=value):
+                    with self.assertRaises(ValidationError):
+                        self.service.calculate(self._default_input(**{field_name: value}))
+
+    def test_invalid_strand_key_raises(self) -> None:
+        with self.assertRaises(ValidationError):
+            self.service.calculate(self._default_input(strand_key="CP 999"))
+
+    def test_invalid_enum_values_raise_validation_error(self) -> None:
+        with self.assertRaises(ValidationError):
+            self.service.calculate(self._default_input(bond_condition="ruim"))
+        with self.assertRaises(ValidationError):
+            self.service.calculate(self._default_input(anchorage_type="dobrado"))
 
     def test_invalid_inclination_raises(self) -> None:
         with self.assertRaises(ValidationError):

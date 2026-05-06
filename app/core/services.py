@@ -6,10 +6,17 @@ import math
 from datetime import datetime
 
 from app.core.exceptions import ValidationError
-from app.core.models import ALPHA_ANCHORAGE, BondCondition, LiftingInput, LiftingResult, STRAND_SPECS
+from app.core.models import (
+    ALPHA_ANCHORAGE,
+    AnchorageType,
+    BondCondition,
+    LiftingInput,
+    LiftingResult,
+    STRAND_SPECS,
+)
 
 N_PER_TF = 9_806.65
-GAMMA_C = 1.4
+GAMMA_C = 1.3
 GAMMA_S = 1.15
 ETA_P1_FOR_7_WIRE_STRAND = 1.2
 ECJ_FACTOR = 0.9
@@ -359,21 +366,53 @@ class LiftingVerifierService:
 
     @staticmethod
     def _validate(data: LiftingInput) -> None:
-        if data.fckj_mpa <= 0:
-            raise ValidationError("Fck,j deve ser maior que zero.")
-        if data.fck_28_mpa <= 0:
-            raise ValidationError("Fck (28 dias) deve ser maior que zero.")
+        LiftingVerifierService._validate_positive_finite(
+            data.fckj_mpa,
+            "Fck,j deve ser maior que zero.",
+        )
+        LiftingVerifierService._validate_positive_finite(
+            data.fck_28_mpa,
+            "Fck (28 dias) deve ser maior que zero.",
+        )
+        LiftingVerifierService._validate_positive_finite(
+            data.volume_m3,
+            "Volume deve ser maior que zero.",
+        )
+        LiftingVerifierService._validate_positive_finite(
+            data.concrete_unit_weight_tf_m3,
+            "Peso especifico do concreto deve ser maior que zero.",
+        )
+        LiftingVerifierService._validate_positive_finite(
+            data.inclination_deg,
+            "Inclinacao deve ser maior que zero.",
+        )
+        LiftingVerifierService._validate_positive_finite(
+            data.available_anchorage_cm,
+            "Ancoragem disponivel deve ser maior que zero.",
+        )
+        LiftingVerifierService._validate_positive_finite(
+            data.beta_a,
+            "Beta a deve ser maior que zero.",
+        )
+        LiftingVerifierService._validate_positive_finite(
+            data.gamma_n,
+            "Gamma n deve ser maior que zero.",
+        )
+
+        if not isinstance(data.bond_condition, BondCondition):
+            raise ValidationError("Condicao de aderencia invalida.")
+        if not isinstance(data.anchorage_type, AnchorageType):
+            raise ValidationError("Tipo de ancoragem invalido.")
         if data.fck_28_mpa < data.fckj_mpa:
             raise ValidationError("Fck (28 dias) deve ser >= Fck,j.")
-        if data.volume_m3 <= 0:
-            raise ValidationError("Volume deve ser maior que zero.")
-        if data.concrete_unit_weight_tf_m3 <= 0:
-            raise ValidationError("Peso especifico do concreto deve ser maior que zero.")
         if data.strand_key not in STRAND_SPECS:
             raise ValidationError("Tipo de cordoalha invalido.")
         if not (0.1 <= data.inclination_deg <= 90.0):
             raise ValidationError("Inclinacao deve estar entre 0,1 e 90 graus.")
-        if data.available_anchorage_cm <= 0:
-            raise ValidationError("Ancoragem disponivel deve ser maior que zero.")
         if data.loops_count <= 0:
             raise ValidationError("Quantidade de alcas deve ser maior que zero.")
+
+    @staticmethod
+    def _validate_positive_finite(value: float, message: str) -> None:
+        if not math.isfinite(value) or value <= 0:
+            raise ValidationError(message)
