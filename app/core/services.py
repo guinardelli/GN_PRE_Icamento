@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime
 
 from app.core.exceptions import ValidationError
 from app.core.models import ALPHA_ANCHORAGE, BondCondition, LiftingInput, LiftingResult, STRAND_SPECS
@@ -149,6 +150,7 @@ class LiftingVerifierService:
         strand = STRAND_SPECS[data.strand_key]
         sin_inclination = math.sin(math.radians(data.inclination_deg))
         bond_factor = BOND_FACTOR_BY_CONDITION[data.bond_condition]
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Valores intermediários para exibição
         fctk_inf_j = 0.7 * result.fctm_j_mpa
@@ -162,6 +164,8 @@ class LiftingVerifierService:
             "=" * 60,
             "MEMORIA DE CALCULO - VERIFICACAO DE ICAMENTO",
             "NBR 9062 / NBR 6118:2023",
+            f"GERADO EM: {timestamp}",
+            f"IDENTIFICACAO DA PECA: {data.piece_id.strip() or '-'}",
             "=" * 60,
             "",
             "DADOS DE ENTRADA",

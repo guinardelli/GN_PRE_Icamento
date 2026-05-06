@@ -189,6 +189,12 @@ class LiftingVerifierServiceTests(unittest.TestCase):
         self.assertIn("fbpd,j", memory)
         self.assertIn("fbpd,28", memory)
 
+    def test_calculation_memory_includes_piece_identification(self) -> None:
+        data = self._default_input(piece_id="VIGA-A1")
+        result = self.service.calculate(data)
+        memory = self.service.build_calculation_memory(data, result)
+        self.assertIn("IDENTIFICACAO DA PECA: VIGA-A1", memory)
+
     def test_calculation_memory_shows_approved_or_rejected(self) -> None:
         data = self._default_input(volume_m3=0.05, available_anchorage_cm=300.0, loops_count=4)
         result = self.service.calculate(data)

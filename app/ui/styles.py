@@ -12,18 +12,21 @@ def base_style() -> str:
     }
     QGroupBox {
         background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        margin-top: 12px;
-        padding: 12px 16px;
+        border: 1px solid #d0d7de;
+        border-radius: 4px;
+        margin-top: 14px;
         font-weight: 600;
         color: #0f172a;
+        font-size: 10pt;
     }
     QGroupBox::title {
         subcontrol-origin: margin;
-        left: 12px;
-        padding: 0 4px;
+        subcontrol-position: top left;
+        left: 8px;
+        padding: 2px 6px;
         color: #475569;
+        background: #f8fafc;
+        border-radius: 3px;
     }
     QPushButton {
         background-color: #0f172a;
@@ -44,12 +47,21 @@ def base_style() -> str:
         background-color: #ffffff;
         border: 1px solid #cbd5e1;
         border-radius: 6px;
-        padding: 6px 8px;
+        padding: 4px 8px;
         color: #0f172a;
+        selection-background-color: #3b82f6;
+        selection-color: #ffffff;
+    }
+    QDoubleSpinBox, QSpinBox {
+        min-height: 26px;
     }
     QLineEdit:focus, QDoubleSpinBox:focus, QSpinBox:focus, QComboBox:focus, QTextEdit:focus {
         border: 1px solid #3b82f6;
         background-color: #f0fdf4; /* Very light tint on focus */
+    }
+    QLineEdit[invalid="true"], QDoubleSpinBox[invalid="true"], QSpinBox[invalid="true"], QComboBox[invalid="true"] {
+        border: 2px solid #dc2626;
+        background-color: #fef2f2;
     }
     QComboBox::drop-down {
         border-left: 1px solid #cbd5e1;

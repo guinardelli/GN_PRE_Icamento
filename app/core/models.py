@@ -96,6 +96,7 @@ class LiftingInput:
     loops_count: int
     beta_a: float = 3.0
     gamma_n: float = 1.3
+    piece_id: str = ""
 
 
 @dataclass(frozen=True)

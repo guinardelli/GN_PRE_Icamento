@@ -1,70 +1,58 @@
-"""Dynamic lifting sketch widget that adapts to loop count and anchorage type."""
+﻿"""Dynamic lifting sketch widget that adapts to loop count and anchorage diagnostics."""
 
 from __future__ import annotations
 
 import math
 
 from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import (
-    QBrush,
-    QColor,
-    QFont,
-    QPainter,
-    QPainterPath,
-    QPen,
-)
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QWidget
 
 from app.core.models import AnchorageType
 
-
-# ---------------------------------------------------------------------------
-# Colors
-# ---------------------------------------------------------------------------
 _CONCRETE_FILL = QColor("#e2e8f0")
 _CONCRETE_BORDER = QColor("#94a3b8")
-_STRAND_COLOR = QColor("#10b981")  # Emerald green
+_STRAND_OK_COLOR = QColor("#10b981")
+_STRAND_FAIL_COLOR = QColor("#dc2626")
 _SLING_COLOR = QColor("#475569")
 _LABEL_COLOR = QColor("#334155")
-_BG_COLOR = QColor("#ffffff")      # Blends with GroupBox
+_BG_COLOR = QColor("#ffffff")
 _SURFACE_COLOR = QColor("#64748b")
-_HOOK_POINT_COLOR = QColor("#0f172a") # Dark charcoal for the hook
+_HOOK_POINT_COLOR = QColor("#0f172a")
+_DIMENSION_COLOR = QColor("#1d4ed8")
 
 
 class LiftingSketchWidget(QWidget):
-    """Renders a cross-section sketch of the lifting configuration.
-
-    The sketch dynamically adapts to:
-    - ``loops_count``: number of loops (each drawn with 2 legs).
-    - ``anchorage_type``: end treatment inside the concrete (straight / 90° / 180°).
-    - ``inclination_deg``: angle of the sling lines.
-    """
+    """Renders a cross-section sketch of the lifting configuration."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._loops_count: int = 2
         self._anchorage_type: AnchorageType = AnchorageType.STRAIGHT
         self._inclination_deg: float = 60.0
+        self._anchorage_is_ok: bool = True
+        self._required_anchorage_cm: float = 0.0
+        self._available_anchorage_cm: float = 0.0
         self.setMinimumSize(260, 220)
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
     def update_sketch(
         self,
         loops_count: int,
         anchorage_type: AnchorageType,
         inclination_deg: float,
+        anchorage_is_ok: bool = True,
+        required_anchorage_cm: float = 0.0,
+        available_anchorage_cm: float = 0.0,
     ) -> None:
         """Update sketch parameters and trigger repaint."""
         self._loops_count = max(1, loops_count)
         self._anchorage_type = anchorage_type
         self._inclination_deg = max(5.0, min(90.0, inclination_deg))
+        self._anchorage_is_ok = anchorage_is_ok
+        self._required_anchorage_cm = max(0.0, required_anchorage_cm)
+        self._available_anchorage_cm = max(0.0, available_anchorage_cm)
         self.update()
 
-    # ------------------------------------------------------------------
-    # Painting
-    # ------------------------------------------------------------------
     def paintEvent(self, event) -> None:  # noqa: N802
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing, True)
@@ -75,34 +63,25 @@ class LiftingSketchWidget(QWidget):
         w = area.width()
         h = area.height()
 
-        # Layout proportions
-        concrete_top_ratio = 0.42
-        concrete_bottom_ratio = 0.88
-        concrete_left_ratio = 0.10
-        concrete_right_ratio = 0.90
-
         concrete = QRectF(
-            area.left() + w * concrete_left_ratio,
-            area.top() + h * concrete_top_ratio,
-            w * (concrete_right_ratio - concrete_left_ratio),
-            h * (concrete_bottom_ratio - concrete_top_ratio),
+            area.left() + w * 0.10,
+            area.top() + h * 0.42,
+            w * 0.80,
+            h * 0.46,
         )
 
         self._draw_concrete(p, concrete)
         self._draw_loops_and_slings(p, area, concrete)
+        self._draw_anchorage_dimensions(p, area, concrete)
         self._draw_labels(p, area, concrete)
 
         p.end()
 
-    # ------------------------------------------------------------------
-    # Concrete block
-    # ------------------------------------------------------------------
     def _draw_concrete(self, p: QPainter, rect: QRectF) -> None:
         p.setPen(QPen(_CONCRETE_BORDER, 2))
         p.setBrush(QBrush(_CONCRETE_FILL))
         p.drawRect(rect)
 
-        # Hatching (light diagonal lines for concrete texture)
         p.setPen(QPen(QColor("#b8bcc2"), 1, Qt.DashLine))
         step = 12
         x = rect.left() + step
@@ -113,24 +92,18 @@ class LiftingSketchWidget(QWidget):
             p.drawLine(QPointF(x, y_start), QPointF(max(rect.left(), x_end), y_end))
             x += step
 
-        # Surface line (top of concrete)
         p.setPen(QPen(_SURFACE_COLOR, 2, Qt.DashDotLine))
         p.drawLine(
             QPointF(rect.left() - 6, rect.top()),
             QPointF(rect.right() + 6, rect.top()),
         )
 
-    # ------------------------------------------------------------------
-    # Loops + sling lines
-    # ------------------------------------------------------------------
-    def _draw_loops_and_slings(
-        self, p: QPainter, area: QRectF, concrete: QRectF
-    ) -> None:
+    def _draw_loops_and_slings(self, p: QPainter, area: QRectF, concrete: QRectF) -> None:
         n = self._loops_count
         cw = concrete.width()
         cl = concrete.left()
+        strand_color = _STRAND_OK_COLOR if self._anchorage_is_ok else _STRAND_FAIL_COLOR
 
-        # Distribute loops evenly
         margin = cw * 0.12
         usable = cw - 2 * margin
         if n == 1:
@@ -139,25 +112,20 @@ class LiftingSketchWidget(QWidget):
             spacing = usable / (n - 1)
             positions = [cl + margin + i * spacing for i in range(n)]
 
-        leg_gap = min(16.0, cw * 0.06)  # half-gap between legs
+        leg_gap = min(16.0, cw * 0.06)
         loop_height_above = min(28.0, (concrete.top() - area.top()) * 0.35)
         leg_depth = concrete.height() * 0.75
 
-        # Sling convergence point (hook)
         hook_x = area.left() + area.width() / 2
         hook_y = area.top() + 14
 
         loop_tops: list[QPointF] = []
 
-        # Calculate horizontal offsets based on inclination
         inclination_rad = math.radians(self._inclination_deg)
-        # At 90° (vertical) everything is straight; as angle decreases, tilt increases
         if self._inclination_deg < 89.5:
             tan_incl = math.tan(inclination_rad)
-            tilt_offset_curve = loop_height_above / tan_incl
-            tilt_offset_curve = min(tilt_offset_curve, leg_gap * 3)
-            tilt_offset_legs = leg_depth / tan_incl
-            tilt_offset_legs = min(tilt_offset_legs, leg_gap * 4)
+            tilt_offset_curve = min(loop_height_above / tan_incl, leg_gap * 3)
+            tilt_offset_legs = min(leg_depth / tan_incl, leg_gap * 4)
         else:
             tilt_offset_curve = 0.0
             tilt_offset_legs = 0.0
@@ -168,31 +136,31 @@ class LiftingSketchWidget(QWidget):
             top_y = concrete.top()
             bottom_y = top_y + leg_depth
 
-            # Direction of tilt: toward the hook point
             tilt_dir = 1.0 if hook_x >= cx else -1.0
-            dx_legs = -tilt_dir * tilt_offset_legs  # opposite: tilted U base goes away
+            dx_legs = -tilt_dir * tilt_offset_legs
             dx_curve = tilt_dir * tilt_offset_curve
 
-            # --- U-curve above concrete (tilted toward hook) ---
             curve_top_y = top_y - loop_height_above
 
-            strand_pen = QPen(_STRAND_COLOR, 3)
+            strand_pen = QPen(strand_color, 3)
             p.setPen(strand_pen)
             p.setBrush(Qt.NoBrush)
 
             path = QPainterPath()
             path.moveTo(left_leg_x, top_y)
             path.cubicTo(
-                left_leg_x + dx_curve, curve_top_y,
-                right_leg_x + dx_curve, curve_top_y,
-                right_leg_x, top_y,
+                left_leg_x + dx_curve,
+                curve_top_y,
+                right_leg_x + dx_curve,
+                curve_top_y,
+                right_leg_x,
+                top_y,
             )
             p.drawPath(path)
 
             loop_top = QPointF(cx + dx_curve, curve_top_y)
             loop_tops.append(loop_top)
 
-            # --- Legs + anchorage inside concrete (clipped to piece) ---
             left_bot_x = left_leg_x + dx_legs
             right_bot_x = right_leg_x + dx_legs
 
@@ -204,71 +172,74 @@ class LiftingSketchWidget(QWidget):
             p.drawLine(QPointF(left_leg_x, top_y), QPointF(left_bot_x, bottom_y))
             p.drawLine(QPointF(right_leg_x, top_y), QPointF(right_bot_x, bottom_y))
 
-            # Anchorage ends (rotated to match leg inclination)
             self._draw_anchorage_end(
-                p, left_bot_x, bottom_y, leg_gap,
-                is_left=True, leg_dx=dx_legs, leg_dy=leg_depth,
+                p,
+                left_bot_x,
+                bottom_y,
+                leg_gap,
+                is_left=True,
+                leg_dx=dx_legs,
+                leg_dy=leg_depth,
+                strand_color=strand_color,
             )
             self._draw_anchorage_end(
-                p, right_bot_x, bottom_y, leg_gap,
-                is_left=False, leg_dx=dx_legs, leg_dy=leg_depth,
+                p,
+                right_bot_x,
+                bottom_y,
+                leg_gap,
+                is_left=False,
+                leg_dx=dx_legs,
+                leg_dy=leg_depth,
+                strand_color=strand_color,
             )
 
             p.restore()
 
-        # --- Sling lines from each loop to the hook point ---
         p.setPen(QPen(_SLING_COLOR, 2))
         p.setBrush(Qt.NoBrush)
         for pt in loop_tops:
             p.drawLine(pt, QPointF(hook_x, hook_y))
 
-        # --- Hook symbol ---
         self._draw_hook(p, hook_x, hook_y)
 
-        # --- Inclination arc on the first sling ---
         if len(loop_tops) >= 1 and self._inclination_deg < 89.5:
             self._draw_inclination_arc(p, loop_tops[0], hook_x, hook_y, concrete.top())
 
-    # ------------------------------------------------------------------
-    # Anchorage end treatments
-    # ------------------------------------------------------------------
     def _draw_anchorage_end(
-        self, p: QPainter, x: float, y: float, leg_gap: float,
-        is_left: bool, leg_dx: float, leg_dy: float,
+        self,
+        p: QPainter,
+        x: float,
+        y: float,
+        leg_gap: float,
+        is_left: bool,
+        leg_dx: float,
+        leg_dy: float,
+        strand_color: QColor,
     ) -> None:
-        """Draw anchorage end rotated to match leg inclination.
-
-        ``leg_dx`` / ``leg_dy`` define the leg direction vector (top → bottom).
-        The bend/hook is drawn perpendicular to this vector, pointing outward.
-        """
         hook_len = max(8, leg_gap * 0.8)
 
         if self._anchorage_type == AnchorageType.STRAIGHT:
             return
 
-        # Outward perpendicular to the leg direction
         leg_len = math.hypot(leg_dx, leg_dy)
         if leg_len < 1e-6:
             leg_len = 1.0
-        direction = -1.0 if is_left else 1.0  # outward sign
+
+        direction = -1.0 if is_left else 1.0
         perp_x = direction * leg_dy / leg_len
         perp_y = direction * (-leg_dx) / leg_len
-        # Along-leg unit vector (pointing down into concrete)
         along_x = leg_dx / leg_len
         along_y = leg_dy / leg_len
 
-        p.setPen(QPen(_STRAND_COLOR, 3))
+        p.setPen(QPen(strand_color, 3))
         p.setBrush(Qt.NoBrush)
 
         if self._anchorage_type == AnchorageType.HOOK_90:
-            # 90° bend – perpendicular to the leg, pointing outward
             p.drawLine(
                 QPointF(x, y),
                 QPointF(x + hook_len * perp_x, y + hook_len * perp_y),
             )
-
         elif self._anchorage_type == AnchorageType.HOOK_180:
-            # 180° hook – semicircle perpendicular to leg, curving back
             radius = hook_len * 0.5
             path = QPainterPath()
             path.moveTo(x, y)
@@ -282,36 +253,29 @@ class LiftingSketchWidget(QWidget):
             )
             p.drawPath(path)
 
-    # ------------------------------------------------------------------
-    # Hook / eye at the convergence point
-    # ------------------------------------------------------------------
     def _draw_hook(self, p: QPainter, x: float, y: float) -> None:
         r = 6.0
         p.setPen(QPen(_HOOK_POINT_COLOR, 2.5))
         p.setBrush(Qt.NoBrush)
         p.drawEllipse(QPointF(x, y), r, r)
 
-        # Small triangle above (crane attachment hint)
         tri_h = 8
         p.setPen(QPen(_SLING_COLOR, 1.5))
         p.drawLine(QPointF(x, y - r), QPointF(x, y - r - tri_h))
         p.drawLine(QPointF(x - 5, y - r - tri_h), QPointF(x + 5, y - r - tri_h))
 
-    # ------------------------------------------------------------------
-    # Inclination arc annotation
-    # ------------------------------------------------------------------
     def _draw_inclination_arc(
-        self, p: QPainter, loop_pt: QPointF, hook_x: float, hook_y: float,
+        self,
+        p: QPainter,
+        loop_pt: QPointF,
+        hook_x: float,
+        hook_y: float,
         concrete_top: float,
     ) -> None:
-        # Draw a small arc at the concrete surface showing the sling angle
         arc_radius = 22.0
         base_y = concrete_top
-
-        # Reference horizontal at the loop point
         ref_x = loop_pt.x()
 
-        # Calculate sling angle from vertical
         dx = hook_x - ref_x
         dy = base_y - hook_y
         if dy <= 0:
@@ -319,32 +283,16 @@ class LiftingSketchWidget(QWidget):
 
         angle_from_vertical = math.degrees(math.atan2(abs(dx), dy))
 
-        # Draw horizontal reference
         p.setPen(QPen(QColor("#9ca3af"), 1, Qt.DashLine))
         horiz_end_x = ref_x + (30 if dx >= 0 else -30)
         p.drawLine(QPointF(ref_x, base_y), QPointF(horiz_end_x, base_y))
 
-        # Draw arc
         p.setPen(QPen(QColor("#6366f1"), 1.5))
-        arc_rect = QRectF(
-            ref_x - arc_radius, base_y - arc_radius,
-            arc_radius * 2, arc_radius * 2,
-        )
-        # Qt angles: 0 = 3 o'clock, positive = counter-clockwise
-        # We want to draw from horizontal (0°) upward to the sling line
-        start_angle_qt = 90 * 16  # 12 o'clock = 90° in Qt coords (from 3 o'clock)
-        if dx >= 0:
-            # Sling goes right: arc from 90° toward the sling angle
-            span = int(angle_from_vertical * 16)
-            start_angle_qt = 90 * 16
-        else:
-            # Sling goes left
-            span = -int(angle_from_vertical * 16)
-            start_angle_qt = 90 * 16
-
+        arc_rect = QRectF(ref_x - arc_radius, base_y - arc_radius, arc_radius * 2, arc_radius * 2)
+        start_angle_qt = 90 * 16
+        span = int(angle_from_vertical * 16) if dx >= 0 else -int(angle_from_vertical * 16)
         p.drawArc(arc_rect, start_angle_qt, span)
 
-        # Angle label
         label_angle = math.radians(90 - angle_from_vertical / 2)
         label_x = ref_x + arc_radius * 1.3 * math.cos(label_angle) * (1 if dx >= 0 else -1)
         label_y = base_y - arc_radius * 1.3 * math.sin(label_angle)
@@ -355,31 +303,51 @@ class LiftingSketchWidget(QWidget):
         p.setFont(font)
         p.drawText(QPointF(label_x - 8, label_y + 3), f"{self._inclination_deg:.0f}°")
 
-    # ------------------------------------------------------------------
-    # Text labels
-    # ------------------------------------------------------------------
+    def _draw_anchorage_dimensions(self, p: QPainter, area: QRectF, concrete: QRectF) -> None:
+        if self._required_anchorage_cm <= 0 and self._available_anchorage_cm <= 0:
+            return
+
+        p.setPen(QPen(_DIMENSION_COLOR, 1.2))
+        font = QFont()
+        font.setPointSize(7)
+        font.setBold(True)
+        p.setFont(font)
+
+        x = concrete.right() - 6
+        y1 = concrete.top() + 8
+        y2 = concrete.bottom() - 14
+
+        p.drawLine(QPointF(x, y1), QPointF(x, y2))
+        p.drawLine(QPointF(x - 4, y1), QPointF(x + 4, y1))
+        p.drawLine(QPointF(x - 4, y2), QPointF(x + 4, y2))
+
+        required_text = f"Anc. nec.: {self._required_anchorage_cm:.1f} cm"
+        available_text = f"Anc. disp.: {self._available_anchorage_cm:.1f} cm"
+        status_text = "OK" if self._anchorage_is_ok else "INSUFICIENTE"
+
+        p.setPen(QPen(_DIMENSION_COLOR, 1))
+        p.drawText(QRectF(area.left() + 10, area.top() + 4, area.width() - 20, 14), Qt.AlignLeft, required_text)
+        p.drawText(QRectF(area.left() + 10, area.top() + 18, area.width() - 20, 14), Qt.AlignLeft, available_text)
+
+        p.setPen(QPen(_STRAND_OK_COLOR if self._anchorage_is_ok else _STRAND_FAIL_COLOR, 1))
+        p.drawText(QRectF(area.left() + 10, area.top() + 32, area.width() - 20, 14), Qt.AlignLeft, f"Status: {status_text}")
+
     def _draw_labels(self, p: QPainter, area: QRectF, concrete: QRectF) -> None:
         font = QFont()
         font.setPointSize(7)
         p.setFont(font)
         p.setPen(QPen(_LABEL_COLOR, 1))
 
-        # "CONCRETO" centered in block
-        text_rect = QRectF(
-            concrete.left(), concrete.bottom() - 18,
-            concrete.width(), 16,
-        )
+        text_rect = QRectF(concrete.left(), concrete.bottom() - 18, concrete.width(), 16)
         p.drawText(text_rect, Qt.AlignCenter, "CONCRETO")
 
-        # Loop count
-        loop_text = f"{self._loops_count} alca{'s' if self._loops_count > 1 else ''}"
+        loop_text = f"{self._loops_count} alça{'s' if self._loops_count > 1 else ''}"
         p.drawText(
             QRectF(area.left(), area.bottom() - 16, area.width() / 2, 14),
             Qt.AlignLeft | Qt.AlignBottom,
             loop_text,
         )
 
-        # Anchorage type label
         anc_labels = {
             AnchorageType.STRAIGHT: "Anc. reta",
             AnchorageType.HOOK_90: "Anc. dobra 90°",
@@ -392,7 +360,11 @@ class LiftingSketchWidget(QWidget):
             anc_text,
         )
 
-        # "T" force label near hook
+        legend_rect = QRectF(area.left(), area.bottom() - 30, area.width(), 12)
+        p.setPen(QPen(_STRAND_OK_COLOR if self._anchorage_is_ok else _STRAND_FAIL_COLOR, 1))
+        legend_text = "Cordoalha: OK" if self._anchorage_is_ok else "Cordoalha: ancoragem insuficiente"
+        p.drawText(legend_rect, Qt.AlignLeft | Qt.AlignBottom, legend_text)
+
         hook_x = area.left() + area.width() / 2
         hook_y = area.top() + 14
         font.setPointSize(8)
@@ -401,7 +373,6 @@ class LiftingSketchWidget(QWidget):
         p.setPen(QPen(_SLING_COLOR, 1))
         p.drawText(QPointF(hook_x + 12, hook_y - 4), "T")
 
-        # Arrow pointing up from hook
         arrow_top = QPointF(hook_x, hook_y - 22)
         p.setPen(QPen(_SLING_COLOR, 1.5))
         p.drawLine(QPointF(hook_x, hook_y - 6), arrow_top)
