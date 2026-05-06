@@ -12,17 +12,13 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
-    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
     QMessageBox,
-    QProgressBar,
     QPushButton,
-    QScrollArea,
-    QSplitter,
     QSpinBox,
     QTabWidget,
     QTextEdit,
@@ -76,40 +72,37 @@ class MainWindow(QMainWindow):
     def _build_verification_tab(self) -> QWidget:
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.setSpacing(6)
-        layout.setContentsMargins(0, 10, 0, 0)
+        layout.setSpacing(8)
+        layout.setContentsMargins(0, 8, 0, 0)
 
-        top_content = QWidget()
-        top_row = QHBoxLayout(top_content)
+        top_row = QHBoxLayout()
         top_row.setContentsMargins(0, 0, 0, 0)
-        top_row.setSpacing(10)
-        top_row.addWidget(self._build_input_group(), 3)
-        top_row.addWidget(self._build_result_panel(), 4)
+        top_row.setSpacing(8)
+        top_row.addWidget(self._build_input_group(), 0)
+
+        right_column = QVBoxLayout()
+        right_column.setSpacing(8)
+        right_column.addWidget(self._build_result_panel(), 0)
 
         sketch_group = QGroupBox("Representação Gráfica")
         sketch_layout = QVBoxLayout(sketch_group)
-        sketch_layout.setContentsMargins(4, 4, 4, 4)
+        sketch_layout.setContentsMargins(6, 12, 6, 6)
         self.sketch_widget = LiftingSketchWidget()
-        self.sketch_widget.setMinimumHeight(140)
+        self.sketch_widget.setMinimumHeight(170)
         sketch_layout.addWidget(self.sketch_widget)
+        right_column.addWidget(sketch_group, 1)
 
-        splitter = QSplitter(Qt.Vertical)
-        splitter.addWidget(top_content)
-        splitter.addWidget(sketch_group)
-        splitter.setStretchFactor(0, 5)
-        splitter.setStretchFactor(1, 2)
-        splitter.setSizes([560, 160])
-        layout.addWidget(splitter, 1)
+        top_row.addLayout(right_column, 1)
+        layout.addLayout(top_row, 1)
 
         return tab
 
-    def _build_input_group(self) -> QGroupBox:
-        group = QGroupBox("Dados de Entrada")
-        outer = QVBoxLayout(group)
+    def _build_input_group(self) -> QWidget:
+        panel = QWidget()
+        outer = QVBoxLayout(panel)
         outer.setSpacing(6)
-        outer.setContentsMargins(8, 16, 8, 8)
+        outer.setContentsMargins(0, 0, 0, 0)
 
-        # --- Instancia widgets ---
         self.piece_id_input = QLineEdit()
         self.piece_id_input.setPlaceholderText("Ex.: VIGA P1 - LOTE 03")
 
@@ -189,13 +182,6 @@ class MainWindow(QMainWindow):
         self.gamma_n_input.setDecimals(2)
         self.gamma_n_input.setValue(1.30)
 
-        # --- Formulário único com separadores visuais leves ---
-        form = QFormLayout()
-        form.setSpacing(7)
-        form.setContentsMargins(0, 0, 0, 0)
-        form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-
-        # Define largura mínima para todos os campos de entrada
         for widget in (
             self.piece_id_input,
             self.fckj_input, self.fck_28_input,
@@ -204,83 +190,65 @@ class MainWindow(QMainWindow):
             self.anchorage_input, self.anchorage_type_input, self.bond_input,
             self.beta_a_input, self.gamma_n_input,
         ):
-            widget.setMinimumWidth(120)
-
-        form.addRow("Identificação:", self.piece_id_input)
-        form.addRow(self._form_separator())
-        form.addRow("Fck,j (içamento):", self.fckj_input)
-        form.addRow("Fck,28 (28 dias):", self.fck_28_input)
-        form.addRow(self._form_separator())
-        form.addRow("Volume da peça:", self.volume_input)
-        form.addRow("Peso específico:", self.unit_weight_input)
-        form.addRow(self._form_separator())
-        form.addRow("Cordoalha:", self.strand_input)
-        form.addRow("Inclinação da alça:", self.inclination_input)
-        form.addRow("Número de alças:", self.loops_input)
-        form.addRow(self._form_separator())
-        form.addRow("Comprimento de ancoragem:", self.anchorage_input)
-        form.addRow("Tipo de ancoragem:", self.anchorage_type_input)
-        form.addRow("Condição de aderência:", self.bond_input)
-        form.addRow(self._form_separator())
-        form.addRow("βa (ampl. dinâmica):", self.beta_a_input)
-        form.addRow("γn (majoração):", self.gamma_n_input)
-
-        outer.addLayout(form)
+            widget.setFixedWidth(142)
 
         calculate_button = QPushButton("Calcular Verificação")
         calculate_button.setCursor(Qt.PointingHandCursor)
         calculate_button.clicked.connect(lambda: self._on_calculate(show_errors=True))
 
-        # Scroll area para o formulário (permite acessar todos os campos em janelas menores)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        form_container = QWidget()
-        form_layout = QVBoxLayout(form_container)
-        form_layout.setContentsMargins(0, 0, 4, 0)
-        form_layout.setSpacing(0)
-        form_layout.addLayout(form)
-        form_layout.addStretch(1)
-        scroll.setWidget(form_container)
+        piece_group, piece_form = self._new_form_group("Peça")
+        piece_form.addRow("Identificação", self.piece_id_input)
+        piece_form.addRow("Volume", self.volume_input)
+        piece_form.addRow("Peso específico", self.unit_weight_input)
 
-        outer.addWidget(scroll, 1)
+        material_group, material_form = self._new_form_group("Materiais")
+        material_form.addRow("Fck,j", self.fckj_input)
+        material_form.addRow("Fck,28", self.fck_28_input)
+        material_form.addRow("Cordoalha", self.strand_input)
+
+        lifting_group, lifting_form = self._new_form_group("Içamento")
+        lifting_form.addRow("Inclinação", self.inclination_input)
+        lifting_form.addRow("Número de alças", self.loops_input)
+
+        anchorage_group, anchorage_form = self._new_form_group("Ancoragem")
+        anchorage_form.addRow("Comprimento", self.anchorage_input)
+        anchorage_form.addRow("Tipo", self.anchorage_type_input)
+        anchorage_form.addRow("Aderência", self.bond_input)
+
+        coefficients_group, coefficients_form = self._new_form_group("Coeficientes")
+        coefficients_form.addRow("βa", self.beta_a_input)
+        coefficients_form.addRow("γn", self.gamma_n_input)
+
+        outer.addWidget(piece_group)
+        outer.addWidget(material_group)
+        outer.addWidget(lifting_group)
+        outer.addWidget(anchorage_group)
+        outer.addWidget(coefficients_group)
+        outer.addStretch(1)
         outer.addWidget(calculate_button)
-        return group
+        return panel
 
     def _build_result_panel(self) -> QGroupBox:
-        group = QGroupBox("Resultado da Verificação")
+        group = QGroupBox("Resultados")
         outer_layout = QVBoxLayout(group)
-        outer_layout.setSpacing(8)
-        outer_layout.setContentsMargins(8, 16, 8, 8)
+        outer_layout.setSpacing(6)
+        outer_layout.setContentsMargins(8, 14, 8, 8)
 
-        # --- Banner de status ---
-        self.status_label = QLabel("Preencha os dados e clique em 'Calcular Verificação'.")
+        self.status_label = QLabel("Aguardando cálculo")
         self.status_label.setWordWrap(True)
         self.status_label.setAlignment(Qt.AlignCenter)
-        self.status_label.setMinimumHeight(38)
+        self.status_label.setMinimumHeight(28)
         self.status_label.setStyleSheet(
-            "background: #eef0f2; padding: 8px 10px; border: 1px solid #d2d6dc;"
-            " border-radius: 4px; font-weight: 700; font-size: 11pt;"
+            "background: #efefef; color: #222222; padding: 5px 8px;"
+            "border: 1px solid #d6d6d6; font-weight: 700;"
         )
         outer_layout.addWidget(self.status_label)
 
-        # --- Barras de Resumo ---
-        bars_group = QGroupBox("Resumo Visual")
-        bars_layout = QFormLayout(bars_group)
-        bars_layout.setSpacing(6)
-        self.utilization_bar = self._indicator_bar()
-        self.safety_factor_bar = self._indicator_bar()
-        bars_layout.addRow("Utilização:", self.utilization_bar)
-        bars_layout.addRow("Fator de segurança:", self.safety_factor_bar)
-        outer_layout.addWidget(bars_group)
-
-        # --- Indicadores essenciais (sem scroll, fixo) ---
         self.result_fields: dict[str, QLineEdit] = {}
-
-        indicators_group = QGroupBox("Indicadores")
-        ind_form = QFormLayout(indicators_group)
+        ind_form = QFormLayout()
         ind_form.setSpacing(5)
+        ind_form.setContentsMargins(0, 0, 0, 0)
+        ind_form.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
         for key, label in (
             ("utilization", "Taxa de utilização"),
             ("safety_factor", "Fator de segurança (FS)"),
@@ -293,9 +261,8 @@ class MainWindow(QMainWindow):
             field = self._result_field()
             self.result_fields[key] = field
             ind_form.addRow(label + ":", field)
-        outer_layout.addWidget(indicators_group)
+        outer_layout.addLayout(ind_form)
 
-        # --- Campos adicionais ocultos (populados mas não exibidos aqui) ---
         for key in (
             "stress_developed", "stress_mobilization",
             "tension_per_leg_tf", "total_legs",
@@ -306,17 +273,24 @@ class MainWindow(QMainWindow):
         ):
             field = self._result_field()
             self.result_fields[key] = field
-            # Não adiciona ao layout — apenas populado para a memória
 
-        memory_hint = QLabel("<a href='#'>Memória completa na aba 'Memória de Cálculo'.</a>")
+        memory_hint = QLabel("<a href='#'>Memória completa</a>")
         memory_hint.setAlignment(Qt.AlignCenter)
-        memory_hint.setStyleSheet("font-size: 9pt; color: #334155;")
+        memory_hint.setStyleSheet("font-size: 9pt;")
         memory_hint.setOpenExternalLinks(False)
         memory_hint.linkActivated.connect(lambda: self.tabs.setCurrentIndex(1))
         outer_layout.addWidget(memory_hint)
-        outer_layout.addStretch(1)
 
         return group
+
+    @staticmethod
+    def _new_form_group(title: str) -> tuple[QGroupBox, QFormLayout]:
+        group = QGroupBox(title)
+        form = QFormLayout(group)
+        form.setSpacing(5)
+        form.setContentsMargins(8, 14, 8, 8)
+        form.setFieldGrowthPolicy(QFormLayout.FieldsStayAtSizeHint)
+        return group, form
 
     def _build_memory_tab(self) -> QWidget:
         tab = QWidget()
@@ -356,22 +330,12 @@ class MainWindow(QMainWindow):
         field.setFocusPolicy(Qt.NoFocus)
         field.setAlignment(Qt.AlignRight)
         field.setPlaceholderText("-")
-        field.setStyleSheet("QLineEdit { background-color: transparent; border: none; color: #0f172a; font-weight: 600; }")
-        return field
-
-    @staticmethod
-    def _indicator_bar() -> QProgressBar:
-        bar = QProgressBar()
-        bar.setRange(0, 250)
-        bar.setValue(0)
-        bar.setTextVisible(True)
-        bar.setFormat("-")
-        bar.setMinimumHeight(20)
-        bar.setStyleSheet(
-            "QProgressBar { border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; background: #f8fafc; }"
-            "QProgressBar::chunk { background-color: #2563eb; border-radius: 5px; }"
+        field.setFixedWidth(112)
+        field.setStyleSheet(
+            "QLineEdit { background-color: #efefef; border: 1px solid #d6d6d6;"
+            " color: #111111; font-weight: 600; }"
         )
-        return bar
+        return field
 
     def _build_menu_bar(self) -> None:
         menu = self.menuBar()
@@ -392,15 +356,6 @@ class MainWindow(QMainWindow):
         about_action = QAction("Sobre", self)
         about_action.triggered.connect(self._show_about_dialog)
         help_menu.addAction(about_action)
-
-    @staticmethod
-    def _form_separator() -> QFrame:
-        """Returns a thin horizontal line used as a visual section divider in the form."""
-        line = QFrame()
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
-        line.setStyleSheet("color: #e2e8f0; margin: 2px 0;")
-        return line
 
     def _configure_input_metadata(self) -> None:
         self.piece_id_input.setToolTip(
@@ -501,38 +456,28 @@ class MainWindow(QMainWindow):
         if is_approved:
             self.status_label.setText("VERIFICAÇÃO APROVADA")
             self.status_label.setStyleSheet(
-                "background: #ecfdf3; color: #166534; padding: 8px 10px;"
-                " border: 1px solid #bbf7d0; border-radius: 4px;"
-                " font-weight: 700; font-size: 11pt;"
+                "background: #e8f5e9; color: #0b6b2b; padding: 5px 8px;"
+                "border: 1px solid #b7dfc0; font-weight: 700;"
             )
             self.statusBar().showMessage(
                 f"Aprovada | FS = {result.safety_factor:.2f} | Utilização = {result.utilization_ratio:.1%}"
             )
         else:
             failures = []
-            suggestions = []
             
             if not result.capacity_is_ok:
                 failures.append("Capacidade estrutural insuficiente")
-                suggestions.append("aumente alças ou diâmetro da cordoalha")
             if not result.anchorage_is_ok:
                 failures.append(f"Ancoragem insuficiente (disp. {data.available_anchorage_cm:.1f}cm < nec. {result.required_anchorage_cm:.1f}cm)")
-                suggestions.append("aumente a altura da peça ou use ganchos")
                 
-            text = f"VERIFICAÇÃO REPROVADA: {', '.join(failures)}."
-            if suggestions:
-                text += f"\n💡 Sugestão: {', '.join(set(suggestions))}."
-                
-            self.status_label.setText(text)
+            self.status_label.setText("VERIFICAÇÃO REPROVADA")
             self.status_label.setStyleSheet(
-                "background: #fef2f2; color: #991b1b; padding: 8px 10px;"
-                " border: 1px solid #fecaca; border-radius: 4px;"
-                " font-weight: 700; font-size: 11pt;"
+                "background: #fdecec; color: #9b1c1c; padding: 5px 8px;"
+                "border: 1px solid #f0b8b8; font-weight: 700;"
             )
             self.statusBar().showMessage("Reprovada | " + ", ".join(failures), 9000)
 
         self._update_result_fields(result, data.available_anchorage_cm)
-        self._update_indicator_bars(result)
         self.memory_text.setPlainText(memory_text)
         self.sketch_widget.update_sketch(
             loops_count=data.loops_count,
@@ -614,32 +559,12 @@ class MainWindow(QMainWindow):
             return
         if is_ok:
             field.setStyleSheet(
-                "QLineEdit { background-color: transparent; border: none; color: #166534; font-weight: 700; }"
+                "QLineEdit { background-color: #efefef; border: 1px solid #d6d6d6; color: #0b6b2b; font-weight: 700; }"
             )
         else:
             field.setStyleSheet(
-                "QLineEdit { background-color: transparent; border: none; color: #dc2626; font-weight: 700; }"
+                "QLineEdit { background-color: #efefef; border: 1px solid #d6d6d6; color: #c62828; font-weight: 700; }"
             )
-
-    def _update_indicator_bars(self, result: LiftingResult) -> None:
-        utilization_percent = int(max(0.0, min(250.0, result.utilization_ratio * 100.0)))
-        safety_percent = int(max(0.0, min(250.0, result.safety_factor * 100.0)))
-
-        self.utilization_bar.setValue(utilization_percent)
-        self.utilization_bar.setFormat(f"{result.utilization_ratio:.1%}")
-        self._set_bar_style(self.utilization_bar, ok=result.utilization_ratio <= 1.0)
-
-        self.safety_factor_bar.setValue(safety_percent)
-        self.safety_factor_bar.setFormat(f"{result.safety_factor:.2f}")
-        self._set_bar_style(self.safety_factor_bar, ok=result.safety_factor >= 1.0)
-
-    @staticmethod
-    def _set_bar_style(bar: QProgressBar, ok: bool) -> None:
-        color = "#166534" if ok else "#dc2626"
-        bar.setStyleSheet(
-            "QProgressBar { border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; background: #f8fafc; }"
-            f"QProgressBar::chunk {{ background-color: {color}; border-radius: 5px; }}"
-        )
 
     def _validate_anchorage_field(self, result: LiftingResult, available_anchorage_cm: float) -> None:
         is_invalid = available_anchorage_cm < result.required_anchorage_cm

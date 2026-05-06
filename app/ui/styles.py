@@ -2,108 +2,100 @@
 
 
 def base_style() -> str:
-    """Returns a modern, clean engineering theme."""
+    """Returns a compact light theme for a desktop engineering calculator."""
     return """
     QWidget {
-        background-color: #f8fafc;
-        color: #334155;
+        background-color: #f5f5f5;
+        color: #111111;
         font-family: "Segoe UI", system-ui, sans-serif;
-        font-size: 10pt;
+        font-size: 9pt;
     }
     QGroupBox {
-        background: #ffffff;
-        border: 1px solid #d0d7de;
-        border-radius: 4px;
-        margin-top: 14px;
-        font-weight: 600;
-        color: #0f172a;
-        font-size: 10pt;
+        background: #fbfbfb;
+        border: 1px solid #cfcfcf;
+        border-radius: 0;
+        margin-top: 10px;
+        font-weight: 400;
+        color: #111111;
     }
     QGroupBox::title {
         subcontrol-origin: margin;
         subcontrol-position: top left;
         left: 8px;
-        padding: 2px 6px;
-        color: #475569;
-        background: #f8fafc;
-        border-radius: 3px;
+        padding: 0 4px;
+        color: #111111;
+        background: #f5f5f5;
     }
     QPushButton {
-        background-color: #0f172a;
-        color: #f8fafc;
-        border: 1px solid #0f172a;
-        border-radius: 6px;
-        padding: 10px 16px;
-        font-weight: 600;
+        background-color: #ffffff;
+        color: #111111;
+        border: 1px solid #0078d7;
+        border-radius: 3px;
+        padding: 8px 14px;
+        min-height: 28px;
     }
     QPushButton:hover {
-        background-color: #334155;
-        border-color: #334155;
+        background-color: #f0f7ff;
     }
     QPushButton:pressed {
-        background-color: #000000;
+        background-color: #dbeeff;
     }
     QLineEdit, QDoubleSpinBox, QSpinBox, QComboBox, QTextEdit {
         background-color: #ffffff;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        padding: 4px 8px;
-        color: #0f172a;
-        selection-background-color: #3b82f6;
+        border: 1px solid #c8c8c8;
+        border-radius: 0;
+        padding: 2px 4px;
+        color: #111111;
+        selection-background-color: #0078d7;
         selection-color: #ffffff;
     }
     QDoubleSpinBox, QSpinBox {
-        min-height: 26px;
+        min-height: 22px;
     }
     QLineEdit:focus, QDoubleSpinBox:focus, QSpinBox:focus, QComboBox:focus, QTextEdit:focus {
-        border: 1px solid #3b82f6;
-        background-color: #f0fdf4; /* Very light tint on focus */
+        border: 1px solid #0078d7;
+        background-color: #ffffff;
     }
     QLineEdit[invalid="true"], QDoubleSpinBox[invalid="true"], QSpinBox[invalid="true"], QComboBox[invalid="true"] {
-        border: 2px solid #dc2626;
-        background-color: #fef2f2;
+        border: 1px solid #c62828;
+        background-color: #fff0f0;
     }
     QComboBox::drop-down {
-        border-left: 1px solid #cbd5e1;
-        width: 24px;
+        border-left: 1px solid #c8c8c8;
+        width: 20px;
     }
     QTextEdit {
         font-family: Consolas, 'Courier New', monospace;
         font-size: 9pt;
-        background-color: #f8fafc;
+        background-color: #ffffff;
     }
     QTabWidget::pane {
-        border: 1px solid #e2e8f0;
-        background: #ffffff;
-        border-radius: 4px;
+        border: 1px solid #d8d8d8;
+        background: #f5f5f5;
     }
     QTabBar::tab {
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        padding: 8px 16px;
+        background: #eeeeee;
+        border: 1px solid #d8d8d8;
+        padding: 6px 14px;
         margin-right: 2px;
-        border-top-left-radius: 4px;
-        border-top-right-radius: 4px;
-        color: #64748b;
+        color: #333333;
     }
     QTabBar::tab:selected {
-        background: #ffffff;
-        border-bottom-color: #ffffff;
-        color: #0f172a;
-        font-weight: 600;
+        background: #f5f5f5;
+        border-bottom-color: #f5f5f5;
+        color: #111111;
+        font-weight: 700;
     }
     QScrollBar:vertical {
         border: none;
-        background: #f1f5f9;
+        background: #eeeeee;
         width: 10px;
-        border-radius: 5px;
     }
     QScrollBar::handle:vertical {
-        background: #cbd5e1;
+        background: #c0c0c0;
         min-height: 20px;
-        border-radius: 5px;
     }
     QScrollBar::handle:vertical:hover {
-        background: #94a3b8;
+        background: #a8a8a8;
     }
     """
