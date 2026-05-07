@@ -15,8 +15,8 @@ venv/
 build/
 dist/
 *.spec
+!packaging/*.spec
 
 # Local temporary screenshots/exports
 screenshot_*.png
 *.tmp
-

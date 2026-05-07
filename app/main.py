@@ -5,8 +5,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication
-
 # Allows running both:
 # 1) from project root: python app/main.py
 # 2) from app folder:   python main.py
@@ -20,8 +18,37 @@ from app.ui.main_window import MainWindow
 
 
 def main() -> int:
-    app = QApplication(sys.argv)
+    smoke_test = "--smoke-test" in sys.argv
+    if smoke_test:
+        import os
+
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+    from PySide6.QtWidgets import QApplication
+
+    app_args = [arg for arg in sys.argv if arg != "--smoke-test"]
+    app = QApplication(app_args)
     window = MainWindow()
+    if smoke_test:
+        if window.stack.currentWidget() is not window.home_widget:
+            return 1
+        window.home_widget.calculator_selected.emit("lifting")
+        lifting_calculator = window.get_calculator("lifting")
+        if lifting_calculator is None:
+            return 1
+        memory_text = lifting_calculator.memory_text.toPlainText()
+        if lifting_calculator._last_lifting_result is None:
+            return 1
+        if "MEMORIA DE CALCULO" not in memory_text:
+            return 1
+        window.show_home()
+        if window.stack.currentWidget() is not window.home_widget:
+            return 1
+        window.home_widget.calculator_selected.emit("lifting")
+        if window.get_calculator("lifting") is not lifting_calculator:
+            return 1
+        return 0
+
     window.show()
     return app.exec()
 

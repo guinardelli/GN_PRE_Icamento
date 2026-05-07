@@ -1,12 +1,34 @@
-# Verificador de Icamento com Cordoalhas (NBR 9062)
+# GN PRE - Calculadoras
 
-Aplicativo desktop para Windows, em Python 3.11+ e PySide6, para verificacao preliminar de icamento de pecas de concreto com alcas em cordoalha.
+Aplicativo desktop para Windows, em Python 3.11+ e PySide6, com calculadoras auxiliares para pre-fabricados.
+
+A aplicacao abre em uma home simples. Cada calculadora fica em uma tela propria, acessada por botao/card, mantendo a navegacao clara e facilitando a inclusao gradual de novas ferramentas.
+
+Calculadora disponivel nesta versao:
+
+- Alca de icamento: verificacao preliminar de icamento de pecas de concreto com alcas em cordoalha.
 
 Versao alvo deste release: 1.0.0.
 
 Os resultados sao recalculados automaticamente sempre que os dados de entrada sao alterados. Entradas invalidas aparecem como estado da propria tela, sem necessidade de botao manual de calculo.
 
-## Escopo desta versao
+## Estrutura da aplicacao
+
+- `app/main.py`: ponto de entrada.
+- `app/ui/main_window.py`: janela principal, home e navegacao entre calculadoras.
+- `app/ui/home_widget.py`: tela inicial com a lista de calculadoras disponiveis.
+- `app/ui/calculators/`: widgets das calculadoras e registro simples.
+- `app/core/`: modelos, validacoes e regras de negocio independentes da interface.
+- `app/infrastructure/`: exportacoes e detalhes externos.
+
+Para adicionar uma nova calculadora:
+
+1. Criar um novo widget em `app/ui/calculators/`.
+2. Manter regras de negocio testaveis em `app/core/`, quando houver logica relevante.
+3. Registrar a calculadora em `app/ui/calculators/registry.py`.
+4. Validar o fluxo Home -> Calculadora -> Home.
+
+## Escopo da calculadora Alca de icamento
 
 Entradas:
 
@@ -85,8 +107,37 @@ pip install -r requirements.txt
 python app/main.py
 ```
 
-## Testes
+## Como gerar o executavel Windows
+
+O empacotamento usa PyInstaller em modo `onedir`, que e mais leve para iniciar e mais previsivel com PySide6 do que `onefile`.
+O PyInstaller e dependencia apenas de build; nao precisa entrar no `requirements.txt` de execucao.
+
+Se necessario, instale antes de empacotar:
 
 ```bash
-python -m unittest discover -s tests
+pip install pyinstaller
 ```
+
+```bash
+powershell -ExecutionPolicy Bypass -File tools\build_exe.ps1
+```
+
+Saidas geradas:
+
+- Pasta executavel: `dist\release_YYYYMMDD_HHMMSS\GN_PRE_Icamento\`
+- Executavel: `GN_PRE_Icamento.exe`
+- Pacote para distribuicao: `dist\GN_PRE_Icamento_1.0.0_windows.zip`
+
+Para enviar a aplicacao a outro computador, use o `.zip` inteiro. O `.exe` depende das DLLs dentro da pasta `_internal`.
+
+Tambem e possivel gerar um `.exe` unico, sem pasta auxiliar:
+
+```bash
+powershell -ExecutionPolicy Bypass -File tools\build_onefile_exe.ps1
+```
+
+Saida gerada:
+
+- `dist\GN_PRE_Icamento_1.0.0_windows_onefile.exe`
+
+Esse formato e mais simples de distribuir, mas pode demorar mais para abrir porque extrai as DLLs do PySide6 em uma pasta temporaria a cada execucao.
