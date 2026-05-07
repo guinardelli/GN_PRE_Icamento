@@ -36,29 +36,61 @@ def main() -> int:
             return 1
         if window.menuBar().actions():
             return 1
+
         window.home_widget.calculator_selected.emit("lifting")
         app.processEvents()
-        calculator_window = window.get_calculator_window("lifting")
-        if calculator_window is None or not calculator_window.isVisible():
+        lifting_window = window.get_calculator_window("lifting")
+        if lifting_window is None or not lifting_window.isVisible():
+            return 1
+        if lifting_window.menuBar().actions():
             return 1
         if window.isVisible():
             return 1
         lifting_calculator = window.get_calculator("lifting")
         if lifting_calculator is None:
             return 1
-        memory_text = lifting_calculator.memory_text.toPlainText()
         if lifting_calculator._last_lifting_result is None:
             return 1
-        if "MEMORIA DE CALCULO" not in memory_text:
+        lifting_memory = lifting_calculator.memory_text.toPlainText()
+        if "MEMORIA DE CALCULO" not in lifting_memory:
             return 1
-        calculator_window.close()
+
+        lifting_window.close()
         app.processEvents()
         if not window.isVisible():
             return 1
-        window.home_widget.calculator_selected.emit("lifting")
+
+        window.home_widget.calculator_selected.emit("anchorage")
         app.processEvents()
-        if window.get_calculator("lifting") is not lifting_calculator:
+        anchorage_window = window.get_calculator_window("anchorage")
+        if anchorage_window is None or not anchorage_window.isVisible():
             return 1
+        if anchorage_window.menuBar().actions():
+            return 1
+        anchorage_calculator = window.get_calculator("anchorage")
+        if anchorage_calculator is None:
+            return 1
+        anchorage_memory = anchorage_calculator.memory_text.toPlainText()
+        if "MEMORIA DE CALCULO" not in anchorage_memory:
+            return 1
+        if "ENTRADA INVAL" in anchorage_memory:
+            return 1
+
+        anchorage_window.close()
+        app.processEvents()
+        if not window.isVisible():
+            return 1
+
+        window.home_widget.utility_selected.emit("rebar_converter")
+        app.processEvents()
+        utility_window = window.get_utility_window("rebar_converter")
+        if utility_window is None or not utility_window.isVisible():
+            return 1
+        if utility_window.menuBar().actions():
+            return 1
+        if window.isVisible():
+            return 1
+
         return 0
 
     window.show()

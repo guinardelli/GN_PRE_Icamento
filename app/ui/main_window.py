@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QAction, QCloseEvent, QKeySequence
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QWidget
 
 from app.config.settings import (
     APP_NAME,
-    APP_VERSION,
     WINDOW_MIN_HEIGHT,
     WINDOW_MIN_WIDTH,
 )
@@ -18,9 +17,10 @@ from app.ui.calculators.registry import (
 )
 from app.ui.home_widget import HomeWidget
 from app.ui.styles import base_style
+from app.ui.utilities.registry import UtilityDefinition, get_utility_definitions
 
-HOME_WINDOW_WIDTH = 340
-HOME_WINDOW_HEIGHT = 190
+HOME_WINDOW_WIDTH = 360
+HOME_WINDOW_HEIGHT = 320
 
 
 class CalculatorWindow(QMainWindow):
@@ -33,10 +33,9 @@ class CalculatorWindow(QMainWindow):
         self.definition = definition
         self.calculator = definition.widget_factory()
         self._build_ui()
-        self._build_menu_bar()
 
     def _build_ui(self) -> None:
-        self.setWindowTitle(f"{self.definition.title} - {APP_NAME}")
+        self.setWindowTitle(self.definition.window_title)
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.setStyleSheet(base_style())
         self.setCentralWidget(self.calculator)
@@ -47,54 +46,31 @@ class CalculatorWindow(QMainWindow):
 
         self.statusBar().showMessage("Pronto.")
 
-    def _build_menu_bar(self) -> None:
-        menu = self.menuBar()
-
-        file_menu = menu.addMenu("&Arquivo")
-        export_memory_action = QAction("Exportar Memória (.txt)...", self)
-        export_memory_action.setShortcut(QKeySequence("Ctrl+S"))
-        export_memory_action.triggered.connect(self.export_memory)
-        file_menu.addAction(export_memory_action)
-
-        export_svg_action = QAction("Exportar Desenho (.svg)...", self)
-        export_svg_action.triggered.connect(self.export_svg)
-        file_menu.addAction(export_svg_action)
-
-        tools_menu = menu.addMenu("&Ferramentas")
-        restore_defaults_action = QAction("Restaurar Padrões", self)
-        restore_defaults_action.setShortcut(QKeySequence("Ctrl+R"))
-        restore_defaults_action.triggered.connect(self.restore_defaults)
-        tools_menu.addAction(restore_defaults_action)
-
-        help_menu = menu.addMenu("A&juda")
-        about_action = QAction("Sobre", self)
-        about_action.triggered.connect(self._show_about_dialog)
-        help_menu.addAction(about_action)
-
-    def export_memory(self) -> None:
-        if hasattr(self.calculator, "export_memory"):
-            self.calculator.export_memory()
-
-    def export_svg(self) -> None:
-        if hasattr(self.calculator, "export_svg"):
-            self.calculator.export_svg()
-
-    def restore_defaults(self) -> None:
-        if hasattr(self.calculator, "restore_defaults"):
-            self.calculator.restore_defaults()
-
     def closeEvent(self, event: QCloseEvent) -> None:
         self.closed.emit(self.definition.id)
         super().closeEvent(event)
 
-    def _show_about_dialog(self) -> None:
-        QMessageBox.information(
-            self,
-            "Sobre",
-            f"{APP_NAME}\n"
-            f"Versão {APP_VERSION}\n"
-            "Aplicativo de calculadoras auxiliares para pré-fabricados.",
-        )
+
+class UtilityWindow(QMainWindow):
+    """Window that hosts one utility widget."""
+
+    closed = Signal(str)
+
+    def __init__(self, definition: UtilityDefinition) -> None:
+        super().__init__()
+        self.definition = definition
+        self.utility = definition.widget_factory()
+        self._build_ui()
+
+    def _build_ui(self) -> None:
+        self.setWindowTitle(self.definition.window_title)
+        self.setStyleSheet(base_style())
+        self.setFixedSize(self.definition.window_width, self.definition.window_height)
+        self.setCentralWidget(self.utility)
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.closed.emit(self.definition.id)
+        super().closeEvent(event)
 
 
 class MainWindow(QMainWindow):
@@ -103,10 +79,15 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self._calculator_definitions = get_calculator_definitions()
+        self._utility_definitions = get_utility_definitions()
         self._definitions_by_id = {
             definition.id: definition for definition in self._calculator_definitions
         }
+        self._utility_definitions_by_id = {
+            definition.id: definition for definition in self._utility_definitions
+        }
         self._calculator_windows: dict[str, CalculatorWindow] = {}
+        self._utility_windows: dict[str, UtilityWindow] = {}
         self._build_ui()
 
     def _build_ui(self) -> None:
@@ -114,8 +95,12 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(base_style())
         self.setFixedSize(HOME_WINDOW_WIDTH, HOME_WINDOW_HEIGHT)
 
-        self.home_widget = HomeWidget(self._calculator_definitions)
+        self.home_widget = HomeWidget(
+            self._calculator_definitions,
+            self._utility_definitions,
+        )
         self.home_widget.calculator_selected.connect(self.open_calculator)
+        self.home_widget.utility_selected.connect(self.open_utility)
         self.setCentralWidget(self.home_widget)
 
     def open_calculator(self, calculator_id: str) -> None:
@@ -146,6 +131,27 @@ class MainWindow(QMainWindow):
         """Return an instantiated calculator window, if it exists."""
         return self._calculator_windows.get(calculator_id)
 
+    def get_utility_window(self, utility_id: str) -> UtilityWindow | None:
+        """Return an instantiated utility window, if it exists."""
+        return self._utility_windows.get(utility_id)
+
+    def open_utility(self, utility_id: str) -> None:
+        """Open the selected utility in its own window."""
+        definition = self._utility_definitions_by_id.get(utility_id)
+        if definition is None:
+            QMessageBox.warning(
+                self,
+                APP_NAME,
+                f"Utilitario nao encontrado: {utility_id}",
+            )
+            return
+
+        utility_window = self._get_or_create_utility_window(definition)
+        self.hide()
+        utility_window.show()
+        utility_window.raise_()
+        utility_window.activateWindow()
+
     def _get_or_create_calculator_window(
         self,
         definition: CalculatorDefinition,
@@ -164,3 +170,20 @@ class MainWindow(QMainWindow):
         self.raise_()
         self.activateWindow()
 
+    def _get_or_create_utility_window(
+        self,
+        definition: UtilityDefinition,
+    ) -> UtilityWindow:
+        utility_window = self._utility_windows.get(definition.id)
+        if utility_window is not None:
+            return utility_window
+
+        utility_window = UtilityWindow(definition)
+        utility_window.closed.connect(self._show_home_after_utility_close)
+        self._utility_windows[definition.id] = utility_window
+        return utility_window
+
+    def _show_home_after_utility_close(self, _utility_id: str) -> None:
+        self.show()
+        self.raise_()
+        self.activateWindow()

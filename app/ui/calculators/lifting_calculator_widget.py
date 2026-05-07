@@ -2,21 +2,17 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QDoubleSpinBox,
-    QFileDialog,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QPushButton,
     QSpinBox,
     QTabWidget,
@@ -25,9 +21,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.config.settings import (
-    APP_NAME,
-)
 from app.core.exceptions import ValidationError
 from app.core.models import (
     ANCHORAGE_TYPE_LABELS,
@@ -38,7 +31,6 @@ from app.core.models import (
     LiftingResult,
 )
 from app.core.services import LiftingVerifierService
-from app.infrastructure.svg_exporter import export_lifting_svg
 from app.ui.sketch_widget import LiftingSketchWidget
 
 
@@ -73,18 +65,6 @@ class LiftingCalculatorWidget(QWidget):
 
         root_layout.addWidget(self.tabs)
         self._show_status("Pronto.")
-
-    def export_memory(self) -> None:
-        """Export the current calculation memory to a text file."""
-        self._export_memory()
-
-    def export_svg(self) -> None:
-        """Export the current lifting sketch to an SVG file."""
-        self._export_svg()
-
-    def restore_defaults(self) -> None:
-        """Restore default input values."""
-        self._restore_defaults()
 
     def _show_status(self, message: str, timeout_ms: int = 0) -> None:
         self.status_message_requested.emit(message, timeout_ms)
@@ -618,84 +598,6 @@ class LiftingCalculatorWidget(QWidget):
                 "Comprimento de ancoragem disponível em centímetros."
             )
 
-    def _restore_defaults(self) -> None:
-        self.fckj_input.setValue(15.0)
-        self.fck_28_input.setValue(40.0)
-        self.volume_input.setValue(1.0)
-        self.unit_weight_input.setValue(2.5)
-        self.inclination_input.setValue(90.0)
-        self.anchorage_input.setValue(60.0)
-        self.loops_input.setValue(2)
-        self.beta_a_input.setValue(3.0)
-        self.gamma_n_input.setValue(1.30)
-
-        strand_index = self.strand_input.findText("CP 190-RB 12,7 mm")
-        if strand_index >= 0:
-            self.strand_input.setCurrentIndex(strand_index)
-
-        bond_index = self.bond_input.findData(BondCondition.GOOD.value)
-        if bond_index >= 0:
-            self.bond_input.setCurrentIndex(bond_index)
-
-        anchorage_type_index = self.anchorage_type_input.findData(AnchorageType.HOOK_90.value)
-        if anchorage_type_index >= 0:
-            self.anchorage_type_input.setCurrentIndex(anchorage_type_index)
-
-        self._recalculate()
-        self._show_status("Parâmetros restaurados para os valores padrão.", 4000)
-
-    def _export_memory(self) -> None:
-        text = self.memory_text.toPlainText().strip()
-        if not text:
-            QMessageBox.warning(self, APP_NAME, "Não há memória de cálculo para exportar.")
-            return
-
-        suggested_name = "memoria_calculo.txt"
-
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Exportar Memória de Cálculo",
-            str(Path.home() / suggested_name),
-            "Arquivo de texto (*.txt);;Todos os arquivos (*.*)",
-        )
-        if not file_path:
-            return
-
-        try:
-            Path(file_path).write_text(text, encoding="utf-8")
-        except OSError as exc:
-            QMessageBox.critical(self, APP_NAME, f"Falha ao exportar memória: {exc}")
-            return
-
-        self._show_status(f"Memória exportada em: {file_path}", 5000)
-
-    def _export_svg(self) -> None:
-        if self._last_lifting_data is None or self._last_lifting_result is None:
-            QMessageBox.warning(self, APP_NAME, "Nao ha calculo para exportar.")
-            return
-
-        suggested_name = "desenho_icamento.svg"
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Exportar Desenho SVG",
-            str(Path.home() / suggested_name),
-            "Arquivo SVG (*.svg);;Todos os arquivos (*.*)",
-        )
-        if not file_path:
-            return
-
-        try:
-            export_lifting_svg(
-                file_path,
-                self._last_lifting_data,
-                self._last_lifting_result,
-            )
-        except OSError as exc:
-            QMessageBox.critical(self, APP_NAME, f"Falha ao exportar SVG: {exc}")
-            return
-
-        self._show_status(f"SVG exportado em: {file_path}", 5000)
-
     def _validate_fck_relationship(self) -> None:
         is_invalid = self.fck_28_input.value() < self.fckj_input.value()
         self.fck_28_input.setProperty("invalid", is_invalid)
@@ -717,3 +619,4 @@ class LiftingCalculatorWidget(QWidget):
             return
         QApplication.clipboard().setText(text)
         self._show_status("Memória copiada para a área de transferência.", 4000)
+

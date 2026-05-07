@@ -7,6 +7,7 @@ from functools import partial
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QGroupBox,
     QLabel,
     QPushButton,
     QVBoxLayout,
@@ -14,22 +15,29 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.calculators.registry import CalculatorDefinition
+from app.ui.utilities.registry import UtilityDefinition
 
 
 class HomeWidget(QWidget):
     """Simple home screen listing available calculators."""
 
     calculator_selected = Signal(str)
+    utility_selected = Signal(str)
 
-    def __init__(self, calculators: Sequence[CalculatorDefinition]) -> None:
+    def __init__(
+        self,
+        calculators: Sequence[CalculatorDefinition],
+        utilities: Sequence[UtilityDefinition],
+    ) -> None:
         super().__init__()
         self._calculators = tuple(calculators)
+        self._utilities = tuple(utilities)
         self._build_ui()
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(16, 14, 16, 14)
+        layout.setSpacing(10)
 
         title = QLabel("Calculadoras")
         title.setAlignment(Qt.AlignLeft)
@@ -40,15 +48,39 @@ class HomeWidget(QWidget):
         subtitle.setStyleSheet("color: #444444;")
         layout.addWidget(subtitle)
 
+        calculators_group = QGroupBox("NBR 9062")
+        group_layout = QVBoxLayout(calculators_group)
+        group_layout.setContentsMargins(12, 14, 12, 12)
+        group_layout.setSpacing(8)
+
         for calculator in self._calculators:
             button = QPushButton(calculator.title)
             button.setCursor(Qt.PointingHandCursor)
-            button.setFixedWidth(150)
+            button.setMinimumWidth(180)
             button.setToolTip(calculator.description)
             button.clicked.connect(partial(self._select_calculator, calculator.id))
-            layout.addWidget(button, 0, Qt.AlignLeft)
+            group_layout.addWidget(button)
 
+        layout.addWidget(calculators_group)
+
+        utilities_group = QGroupBox("utilidades")
+        utilities_layout = QVBoxLayout(utilities_group)
+        utilities_layout.setContentsMargins(12, 14, 12, 12)
+        utilities_layout.setSpacing(8)
+
+        for utility in self._utilities:
+            button = QPushButton(utility.title)
+            button.setCursor(Qt.PointingHandCursor)
+            button.setMinimumWidth(180)
+            button.setToolTip(utility.description)
+            button.clicked.connect(partial(self._select_utility, utility.id))
+            utilities_layout.addWidget(button)
+
+        layout.addWidget(utilities_group)
         layout.addStretch(1)
 
     def _select_calculator(self, calculator_id: str, _checked: bool = False) -> None:
         self.calculator_selected.emit(calculator_id)
+
+    def _select_utility(self, utility_id: str, _checked: bool = False) -> None:
+        self.utility_selected.emit(utility_id)
