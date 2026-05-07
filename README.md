@@ -2,7 +2,7 @@
 
 Aplicativo desktop para Windows, em Python 3.11+ e PySide6, com calculadoras auxiliares para pre-fabricados.
 
-A aplicacao abre em uma home simples. Cada calculadora fica em uma tela propria, acessada por botao/card, mantendo a navegacao clara e facilitando a inclusao gradual de novas ferramentas.
+A aplicacao abre em uma home compacta e sem menus. Cada calculadora abre em uma janela propria, acessada por botao/card, mantendo a navegacao clara e facilitando a inclusao gradual de novas ferramentas. Ao fechar a janela de uma calculadora, a home volta a ser exibida.
 
 Calculadora disponivel nesta versao:
 
@@ -15,7 +15,7 @@ Os resultados sao recalculados automaticamente sempre que os dados de entrada sa
 ## Estrutura da aplicacao
 
 - `app/main.py`: ponto de entrada.
-- `app/ui/main_window.py`: janela principal, home e navegacao entre calculadoras.
+- `app/ui/main_window.py`: home compacta e janelas das calculadoras.
 - `app/ui/home_widget.py`: tela inicial com a lista de calculadoras disponiveis.
 - `app/ui/calculators/`: widgets das calculadoras e registro simples.
 - `app/core/`: modelos, validacoes e regras de negocio independentes da interface.
@@ -26,7 +26,7 @@ Para adicionar uma nova calculadora:
 1. Criar um novo widget em `app/ui/calculators/`.
 2. Manter regras de negocio testaveis em `app/core/`, quando houver logica relevante.
 3. Registrar a calculadora em `app/ui/calculators/registry.py`.
-4. Validar o fluxo Home -> Calculadora -> Home.
+4. Validar o fluxo Home -> Janela da calculadora -> fechar janela -> Home.
 
 ## Escopo da calculadora Alca de icamento
 

@@ -30,9 +30,19 @@ def main() -> int:
     app = QApplication(app_args)
     window = MainWindow()
     if smoke_test:
-        if window.stack.currentWidget() is not window.home_widget:
+        window.show()
+        app.processEvents()
+        if not window.isVisible():
+            return 1
+        if window.menuBar().actions():
             return 1
         window.home_widget.calculator_selected.emit("lifting")
+        app.processEvents()
+        calculator_window = window.get_calculator_window("lifting")
+        if calculator_window is None or not calculator_window.isVisible():
+            return 1
+        if window.isVisible():
+            return 1
         lifting_calculator = window.get_calculator("lifting")
         if lifting_calculator is None:
             return 1
@@ -41,10 +51,12 @@ def main() -> int:
             return 1
         if "MEMORIA DE CALCULO" not in memory_text:
             return 1
-        window.show_home()
-        if window.stack.currentWidget() is not window.home_widget:
+        calculator_window.close()
+        app.processEvents()
+        if not window.isVisible():
             return 1
         window.home_widget.calculator_selected.emit("lifting")
+        app.processEvents()
         if window.get_calculator("lifting") is not lifting_calculator:
             return 1
         return 0
