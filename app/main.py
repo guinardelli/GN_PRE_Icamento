@@ -1,7 +1,8 @@
-"""Application entry point."""
+"""Official Tkinter application entry point."""
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -14,87 +15,50 @@ if __package__ in (None, ""):
     if project_root_str not in sys.path:
         sys.path.insert(0, project_root_str)
 
-from app.ui.main_window import MainWindow
+
+def _configure_frozen_tcl_paths() -> None:
+    """Help frozen Tkinter builds find Tcl/Tk data before importing tkinter."""
+    bundle_dir = getattr(sys, "_MEIPASS", None)
+    if not bundle_dir:
+        return
+
+    tcl_dir = Path(bundle_dir) / "_tcl_data"
+    tk_dir = Path(bundle_dir) / "_tk_data"
+    if tcl_dir.exists():
+        os.environ.setdefault("TCL_LIBRARY", str(tcl_dir))
+    if tk_dir.exists():
+        os.environ.setdefault("TK_LIBRARY", str(tk_dir))
+    os.environ.setdefault("TCLLIBPATH", str(Path(bundle_dir)))
+
+
+def _run_frozen_smoke_test() -> int:
+    """Validate the frozen Tk runtime without entering the full UI flow."""
+    from app.tk_ui.main_window import TkMainWindow
+
+    if TkMainWindow is None:
+        return 1
+
+    # Windowed PyInstaller executables may keep GUI/Tcl machinery alive when
+    # launched by a build script. This path validates module loading, while the
+    # full source smoke test validates window behavior.
+    os._exit(0)
 
 
 def main() -> int:
+    _configure_frozen_tcl_paths()
+
     smoke_test = "--smoke-test" in sys.argv
+    if smoke_test and getattr(sys, "frozen", False):
+        return _run_frozen_smoke_test()
+
+    from app.tk_ui.main_window import TkMainWindow
+
+    app = TkMainWindow()
     if smoke_test:
-        import os
+        return app.run_smoke_test()
 
-        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
-    from PySide6.QtWidgets import QApplication
-
-    app_args = [arg for arg in sys.argv if arg != "--smoke-test"]
-    app = QApplication(app_args)
-    window = MainWindow()
-    if smoke_test:
-        window.show()
-        app.processEvents()
-        if not window.isVisible():
-            return 1
-        if window.menuBar().actions():
-            return 1
-
-        window.home_widget.calculator_selected.emit("lifting")
-        app.processEvents()
-        lifting_window = window.get_calculator_window("lifting")
-        if lifting_window is None or not lifting_window.isVisible():
-            return 1
-        if lifting_window.menuBar().actions():
-            return 1
-        if window.isVisible():
-            return 1
-        lifting_calculator = window.get_calculator("lifting")
-        if lifting_calculator is None:
-            return 1
-        if lifting_calculator._last_lifting_result is None:
-            return 1
-        lifting_memory = lifting_calculator.memory_text.toPlainText()
-        if "MEMORIA DE CALCULO" not in lifting_memory:
-            return 1
-
-        lifting_window.close()
-        app.processEvents()
-        if not window.isVisible():
-            return 1
-
-        window.home_widget.calculator_selected.emit("anchorage")
-        app.processEvents()
-        anchorage_window = window.get_calculator_window("anchorage")
-        if anchorage_window is None or not anchorage_window.isVisible():
-            return 1
-        if anchorage_window.menuBar().actions():
-            return 1
-        anchorage_calculator = window.get_calculator("anchorage")
-        if anchorage_calculator is None:
-            return 1
-        anchorage_memory = anchorage_calculator.memory_text.toPlainText()
-        if "MEMORIA DE CALCULO" not in anchorage_memory:
-            return 1
-        if "ENTRADA INVAL" in anchorage_memory:
-            return 1
-
-        anchorage_window.close()
-        app.processEvents()
-        if not window.isVisible():
-            return 1
-
-        window.home_widget.utility_selected.emit("rebar_converter")
-        app.processEvents()
-        utility_window = window.get_utility_window("rebar_converter")
-        if utility_window is None or not utility_window.isVisible():
-            return 1
-        if utility_window.menuBar().actions():
-            return 1
-        if window.isVisible():
-            return 1
-
-        return 0
-
-    window.show()
-    return app.exec()
+    app.mainloop()
+    return 0
 
 
 if __name__ == "__main__":

@@ -39,6 +39,8 @@ class LiftingCalculatorFrame(ttk.Frame):
         self.last_lifting_data: LiftingInput | None = None
         self.last_lifting_result: LiftingResult | None = None
         self.result_fields: dict[str, tk.Entry] = {}
+        self.input_fields: dict[str, ttk.Entry] = {}
+        self._invalid_input_key: str | None = None
         self._input_vars = self._create_input_vars()
         self.memory_feedback_var = tk.StringVar(value="")
         self._build_ui()
@@ -67,8 +69,12 @@ class LiftingCalculatorFrame(ttk.Frame):
 
         self.tabs = ttk.Notebook(self)
         self.tabs.grid(row=0, column=0, sticky="nsew")
-        self.tabs.add(self._build_verification_tab(), text="Verificacao")
-        self.tabs.add(self._build_memory_tab(), text="Memoria de Calculo")
+        self.tabs.add(self._build_verification_tab(), text="Verificação")
+        self.tabs.add(self._build_memory_tab(), text="Memória de Cálculo")
+
+    def select_tab(self, index: int) -> None:
+        if 0 <= index < len(self.tabs.tabs()):
+            self.tabs.select(index)
 
     def _build_verification_tab(self) -> ttk.Frame:
         tab = ttk.Frame(self.tabs, padding=(0, styles.GAP, 0, 0))
@@ -89,7 +95,7 @@ class LiftingCalculatorFrame(ttk.Frame):
 
         sketch_group = ttk.LabelFrame(
             right_panel,
-            text="Representacao Grafica",
+            text="Representação Gráfica",
             padding=(6, 10, 6, 6),
         )
         sketch_group.grid(row=1, column=0, sticky="nsew", pady=(styles.GAP, 0))
@@ -115,7 +121,7 @@ class LiftingCalculatorFrame(ttk.Frame):
         return panel
 
     def _build_piece_group(self, parent: tk.Misc) -> ttk.LabelFrame:
-        group = self._new_group(parent, "Peca")
+        group = self._new_group(parent, "Peça")
         self._add_entry_row(group, 0, "Volume", "volume", "m3")
         self._add_entry_row(group, 1, "Peso especifico", "unit_weight", "tf/m3")
         return group
@@ -128,9 +134,9 @@ class LiftingCalculatorFrame(ttk.Frame):
         return group
 
     def _build_lifting_group(self, parent: tk.Misc) -> ttk.LabelFrame:
-        group = self._new_group(parent, "Icamento")
-        self._add_entry_row(group, 0, "Inclinacao", "inclination", "graus")
-        self._add_entry_row(group, 1, "Numero de alcas", "loops", "")
+        group = self._new_group(parent, "Içamento")
+        self._add_entry_row(group, 0, "Inclinação", "inclination", "graus")
+        self._add_entry_row(group, 1, "Número de alças", "loops", "")
         return group
 
     def _build_anchorage_group(self, parent: tk.Misc) -> ttk.LabelFrame:
@@ -153,7 +159,7 @@ class LiftingCalculatorFrame(ttk.Frame):
         self.status_label = tk.Label(
             group,
             text="Aguardando calculo",
-            bg="#efefef",
+            bg=styles.RESULT_BG_COLOR,
             fg="#222222",
             relief="solid",
             bd=1,
@@ -178,7 +184,7 @@ class LiftingCalculatorFrame(ttk.Frame):
             field.grid(row=row, column=1, sticky="e", pady=2)
             self.result_fields[key] = field
 
-        memory_link = ttk.Label(group, text="Memoria completa", foreground="#1d4ed8")
+        memory_link = ttk.Label(group, text="Memória completa", foreground=styles.LINK_COLOR)
         memory_link.grid(row=len(result_rows) + 1, column=0, columnspan=2, pady=(styles.GAP, 0))
         memory_link.bind("<Button-1>", lambda _event: self.tabs.select(1))
         return group
@@ -190,7 +196,7 @@ class LiftingCalculatorFrame(ttk.Frame):
 
         toolbar = ttk.Frame(tab)
         toolbar.grid(row=0, column=0, sticky="ew", pady=(0, styles.GAP))
-        copy_button = ttk.Button(toolbar, text="Copiar Memoria", command=self.copy_memory)
+        copy_button = ttk.Button(toolbar, text="Copiar Memória", command=self.copy_memory)
         copy_button.grid(row=0, column=0, sticky="w")
         feedback = ttk.Label(toolbar, textvariable=self.memory_feedback_var, style="Muted.TLabel")
         feedback.grid(row=0, column=1, sticky="w", padx=(styles.GAP, 0))
@@ -204,8 +210,8 @@ class LiftingCalculatorFrame(ttk.Frame):
             text_frame,
             wrap="none",
             font=("Consolas", 9),
-            bg="#ffffff",
-            fg="#111111",
+            bg=styles.SURFACE_COLOR,
+            fg=styles.TEXT_COLOR,
             relief="solid",
             bd=1,
         )
@@ -232,6 +238,7 @@ class LiftingCalculatorFrame(ttk.Frame):
         ttk.Label(parent, text=label).grid(row=row, column=0, sticky="w", pady=2)
         field = ttk.Entry(parent, textvariable=self._input_vars[key], width=14, justify="right")
         field.grid(row=row, column=1, sticky="e", padx=(styles.GAP, 0), pady=2)
+        self.input_fields[key] = field
         if suffix:
             ttk.Label(parent, text=suffix).grid(row=row, column=2, sticky="w", padx=(4, 0), pady=2)
 
@@ -261,8 +268,8 @@ class LiftingCalculatorFrame(ttk.Frame):
             justify="right",
             relief="solid",
             bd=1,
-            readonlybackground="#efefef",
-            fg="#111111",
+            readonlybackground=styles.RESULT_BG_COLOR,
+            fg=styles.TEXT_COLOR,
             font=("Segoe UI", 9, "bold"),
         )
         field.configure(state="readonly")
@@ -274,6 +281,7 @@ class LiftingCalculatorFrame(ttk.Frame):
 
     def recalculate(self) -> None:
         """Read fields, calculate and refresh all result widgets."""
+        self._invalid_input_key = None
         try:
             data = self._read_input()
             result = self._service.calculate(data)
@@ -282,6 +290,7 @@ class LiftingCalculatorFrame(ttk.Frame):
             self._show_validation_error(exc)
             return
 
+        self._clear_invalid_input_styles()
         self.last_lifting_data = data
         self.last_lifting_result = result
         self._update_status(result)
@@ -301,11 +310,11 @@ class LiftingCalculatorFrame(ttk.Frame):
         """Copy the current calculation memory to the clipboard."""
         text = self.memory_text.get("1.0", "end").strip()
         if not text:
-            self.memory_feedback_var.set("Nenhuma memoria disponivel.")
+            self.memory_feedback_var.set("Nenhuma memória disponível.")
             return
         self.clipboard_clear()
         self.clipboard_append(text)
-        self.memory_feedback_var.set("Memoria copiada.")
+        self.memory_feedback_var.set("Memória copiada.")
 
     def _read_input(self) -> LiftingInput:
         bond = BOND_OPTIONS.get(self._input_vars["bond"].get())
@@ -324,14 +333,14 @@ class LiftingCalculatorFrame(ttk.Frame):
                 "Peso especifico",
             ),
             strand_key=self._input_vars["strand"].get(),
-            inclination_deg=self._parse_float("inclination", "Inclinacao"),
+            inclination_deg=self._parse_float("inclination", "Inclinação"),
             available_anchorage_cm=self._parse_float(
                 "available_anchorage",
-                "Ancoragem disponivel",
+                "Ancoragem disponível",
             ),
             bond_condition=bond,
             anchorage_type=anchorage_type,
-            loops_count=self._parse_int("loops", "Numero de alcas"),
+            loops_count=self._parse_int("loops", "Número de alças"),
             beta_a=self._parse_float("beta_a", "Beta a"),
             gamma_n=self._parse_float("gamma_n", "Gamma n"),
             piece_id="",
@@ -342,6 +351,7 @@ class LiftingCalculatorFrame(ttk.Frame):
         try:
             return float(raw_value)
         except ValueError as exc:
+            self._invalid_input_key = key
             raise ValidationError(f"{label} deve ser numerico.") from exc
 
     def _parse_int(self, key: str, label: str) -> int:
@@ -349,13 +359,24 @@ class LiftingCalculatorFrame(ttk.Frame):
         try:
             return int(raw_value)
         except ValueError as exc:
+            self._invalid_input_key = key
             raise ValidationError(f"{label} deve ser inteiro.") from exc
 
     def _update_status(self, result: LiftingResult) -> None:
         if result.capacity_is_ok and result.anchorage_is_ok:
-            self._set_status("VERIFICACAO APROVADA", "#e8f5e9", "#0b6b2b", "#b7dfc0")
+            self._set_status(
+                "VERIFICAÇÃO APROVADA",
+                styles.OK_BG_COLOR,
+                styles.OK_TEXT_COLOR,
+                styles.OK_BORDER_COLOR,
+            )
         else:
-            self._set_status("VERIFICACAO REPROVADA", "#fdecec", "#9b1c1c", "#f0b8b8")
+            self._set_status(
+                "VERIFICAÇÃO REPROVADA",
+                styles.FAIL_BG_COLOR,
+                styles.FAIL_TEXT_COLOR,
+                styles.FAIL_BORDER_COLOR,
+            )
 
     def _set_status(self, text: str, bg: str, fg: str, border: str) -> None:
         self.status_label.configure(text=text, bg=bg, fg=fg, highlightbackground=border)
@@ -381,14 +402,14 @@ class LiftingCalculatorFrame(ttk.Frame):
         }
         for key, value in values.items():
             is_ok = field_status.get(key)
-            color = "#111111"
+            color = styles.TEXT_COLOR
             if is_ok is True:
-                color = "#0b6b2b"
+                color = styles.OK_TEXT_COLOR
             elif is_ok is False:
-                color = "#c62828"
+                color = styles.ERROR_TEXT_COLOR
             self._set_result_field(key, value, color)
 
-    def _set_result_field(self, key: str, value: str, color: str = "#111111") -> None:
+    def _set_result_field(self, key: str, value: str, color: str = styles.TEXT_COLOR) -> None:
         field = self.result_fields[key]
         field.configure(state="normal", fg=color)
         field.delete(0, "end")
@@ -402,16 +423,35 @@ class LiftingCalculatorFrame(ttk.Frame):
         self.memory_text.configure(state="disabled")
 
     def _show_validation_error(self, error: ValidationError) -> None:
+        self._apply_invalid_input_style()
         self.last_lifting_data = None
         self.last_lifting_result = None
-        self._set_status("ENTRADA INVALIDA", "#fff7ed", "#9a3412", "#fed7aa")
+        self._set_status(
+            "ENTRADA INVÁLIDA",
+            styles.INVALID_BG_COLOR,
+            styles.INVALID_TEXT_COLOR,
+            styles.INVALID_BORDER_COLOR,
+        )
         self._clear_result_fields()
         self._set_memory(
-            "ENTRADA INVALIDA\n\n"
+            "ENTRADA INVÁLIDA\n\n"
             f"{error}\n\n"
-            "A memoria de calculo sera atualizada automaticamente apos a correcao."
+            "A memória de cálculo será atualizada automaticamente após a correção."
         )
 
     def _clear_result_fields(self) -> None:
         for key in self.result_fields:
             self._set_result_field(key, "")
+
+    def _apply_invalid_input_style(self) -> None:
+        self._clear_invalid_input_styles()
+        if self._invalid_input_key is None:
+            return
+        field = self.input_fields.get(self._invalid_input_key)
+        if field is not None:
+            field.configure(style=styles.INVALID_ENTRY_STYLE)
+            field.focus_set()
+
+    def _clear_invalid_input_styles(self) -> None:
+        for field in self.input_fields.values():
+            field.configure(style=styles.DEFAULT_ENTRY_STYLE)

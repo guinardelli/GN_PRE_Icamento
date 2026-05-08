@@ -59,9 +59,11 @@ class RebarConverterFrame(ttk.Frame):
         self.status_label = ttk.Label(
             self,
             textvariable=self.status_var,
-            foreground="#c62828",
+            foreground=styles.ERROR_TEXT_COLOR,
         )
         self.status_label.grid(row=3, column=0, sticky="ew", pady=(6, 0))
+        self.original_spacing_entry.bind("<Return>", lambda _event: self.convert())
+        self.convert_button.bind("<Return>", lambda _event: self.convert())
 
     def _build_original_group(self, group: ttk.LabelFrame) -> None:
         group.columnconfigure(1, weight=1)
@@ -76,7 +78,7 @@ class RebarConverterFrame(ttk.Frame):
         )
         self.original_rebar_combo.grid(row=0, column=1, sticky="ew")
 
-        ttk.Label(group, text="Espacamento (cm)").grid(
+        ttk.Label(group, text="Espaçamento (cm)").grid(
             row=1,
             column=0,
             sticky="w",
@@ -103,7 +105,7 @@ class RebarConverterFrame(ttk.Frame):
         )
         self.equivalent_rebar_combo.grid(row=0, column=1, sticky="ew")
 
-        ttk.Label(group, text="Espacamento (cm)").grid(
+        ttk.Label(group, text="Espaçamento (cm)").grid(
             row=1,
             column=0,
             sticky="w",
@@ -126,6 +128,7 @@ class RebarConverterFrame(ttk.Frame):
         """Calculate and show the equivalent spacing."""
         self.status_var.set("")
         self.equivalent_spacing_var.set("")
+        self._clear_invalid_field()
 
         try:
             original_option = self._selected_option(self.original_rebar_var)
@@ -141,9 +144,11 @@ class RebarConverterFrame(ttk.Frame):
                 )
             )
         except ValueError:
-            self.status_var.set("Espacamento original deve ser numerico.")
+            self._mark_invalid_field()
+            self.status_var.set("Espaçamento original deve ser numérico.")
             return
         except ValidationError as exc:
+            self._mark_invalid_field()
             self.status_var.set(str(exc))
             return
 
@@ -155,3 +160,10 @@ class RebarConverterFrame(ttk.Frame):
             return self._options_by_label[label]
         except KeyError as exc:
             raise ValidationError(f"Bitola invalida: {label}") from exc
+
+    def _mark_invalid_field(self) -> None:
+        self.original_spacing_entry.configure(style=styles.INVALID_ENTRY_STYLE)
+        self.original_spacing_entry.focus_set()
+
+    def _clear_invalid_field(self) -> None:
+        self.original_spacing_entry.configure(style=styles.DEFAULT_ENTRY_STYLE)

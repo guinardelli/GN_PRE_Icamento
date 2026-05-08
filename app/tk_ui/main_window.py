@@ -8,6 +8,7 @@ from tkinter import ttk
 from typing import Callable
 
 from app.tk_ui import styles
+from app.tk_ui.calculators.anchorage_calculator import AnchorageCalculatorFrame
 from app.tk_ui.calculators.lifting_calculator import LiftingCalculatorFrame
 from app.tk_ui.utilities.rebar_converter import RebarConverterFrame
 
@@ -27,26 +28,29 @@ class TkWindowDefinition:
 CALCULATOR_DEFINITIONS: tuple[TkWindowDefinition, ...] = (
     TkWindowDefinition(
         id="lifting",
-        title="Alca de icamento",
-        window_title="GN Pre - Alca de Icamento V 1.0",
-        width=760,
-        height=660,
+        title="Alça de içamento",
+        window_title="GN Pré - Alça de Içamento V 1.0",
+        width=styles.LIFTING_WIDTH,
+        height=styles.LIFTING_HEIGHT,
         frame_factory=LiftingCalculatorFrame,
     ),
     TkWindowDefinition(
         id="anchorage",
         title="Comprimento de ancoragem",
-        window_title="GN Pre - Ancoragem V 1.0",
+        window_title="GN Pré - Ancoragem V 1.0",
+        width=styles.ANCHORAGE_WIDTH,
+        height=styles.ANCHORAGE_HEIGHT,
+        frame_factory=AnchorageCalculatorFrame,
     ),
 )
 
 UTILITY_DEFINITIONS: tuple[TkWindowDefinition, ...] = (
     TkWindowDefinition(
         id="rebar_converter",
-        title="Conversor bitola/espacamento",
-        window_title="GN Pre - Conversor de Armadura V 1.0",
-        width=280,
-        height=240,
+        title="Conversor bitola/espaçamento",
+        window_title="GN Pré - Conversor de Armadura V 1.0",
+        width=styles.REBAR_CONVERTER_WIDTH,
+        height=styles.REBAR_CONVERTER_HEIGHT,
         frame_factory=RebarConverterFrame,
     ),
 )
@@ -71,6 +75,8 @@ class TkMainWindow(tk.Tk):
         self.configure(bg=styles.BG_COLOR)
         self.resizable(False, False)
         self.geometry(f"{styles.HOME_WIDTH}x{styles.HOME_HEIGHT}")
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
 
     def _configure_style(self) -> None:
         style = ttk.Style(self)
@@ -82,7 +88,30 @@ class TkMainWindow(tk.Tk):
         style.configure("TLabel", background=styles.BG_COLOR)
         style.configure("Title.TLabel", font=("Segoe UI", 11, "bold"))
         style.configure("Muted.TLabel", foreground=styles.MUTED_TEXT_COLOR)
-        style.configure("TButton", padding=(10, 6))
+        style.configure(
+            "TButton",
+            padding=(10, 6),
+            background=styles.SURFACE_COLOR,
+            bordercolor="#9ca3af",
+            lightcolor=styles.SURFACE_COLOR,
+            darkcolor="#9ca3af",
+        )
+        style.map(
+            "TButton",
+            background=[("active", "#f3f4f6"), ("pressed", "#e5e7eb")],
+            bordercolor=[("focus", "#2563eb")],
+        )
+        style.configure("TNotebook", background=styles.BG_COLOR, borderwidth=0)
+        style.configure("TNotebook.Tab", padding=(12, 5), background="#f3f4f6")
+        style.map("TNotebook.Tab", background=[("selected", styles.SURFACE_COLOR)])
+        style.configure(
+            styles.INVALID_ENTRY_STYLE,
+            fieldbackground=styles.INVALID_BG_COLOR,
+            foreground=styles.INVALID_TEXT_COLOR,
+            bordercolor=styles.INVALID_BORDER_COLOR,
+            lightcolor=styles.INVALID_BORDER_COLOR,
+            darkcolor=styles.INVALID_BORDER_COLOR,
+        )
 
     def _build_home(self) -> None:
         content = ttk.Frame(self, padding=styles.WINDOW_PAD)
@@ -92,7 +121,7 @@ class TkMainWindow(tk.Tk):
         title = ttk.Label(content, text="Calculadoras", style="Title.TLabel")
         title.grid(row=0, column=0, sticky="w")
 
-        subtitle = ttk.Label(content, text="Selecione uma opcao.", style="Muted.TLabel")
+        subtitle = ttk.Label(content, text="Selecione uma opção.", style="Muted.TLabel")
         subtitle.grid(row=1, column=0, sticky="w", pady=(4, styles.GAP))
 
         calculators_group = ttk.LabelFrame(
@@ -149,7 +178,7 @@ class TkMainWindow(tk.Tk):
             frame.grid(row=0, column=0, sticky="nsew")
             label = ttk.Label(
                 frame,
-                text=f"{definition.title}\n\nTela reservada para a proxima fase.",
+                text=f"{definition.title}\n\nTela reservada para a próxima fase.",
                 justify="center",
             )
             label.grid(row=0, column=0, sticky="nsew")
@@ -157,11 +186,21 @@ class TkMainWindow(tk.Tk):
             frame = definition.frame_factory(child)
             frame.grid(row=0, column=0, sticky="nsew")
 
+        child.bind("<Escape>", lambda _event, item=window_id: self.close_child_window(item))
+        child.bind("<Control-Key-1>", lambda _event, item=frame: self._select_child_tab(item, 0))
+        child.bind("<Control-Key-2>", lambda _event, item=frame: self._select_child_tab(item, 1))
+        child.bind("<Control-Key-3>", lambda _event, item=frame: self._select_child_tab(item, 2))
         self._child_windows[window_id] = child
         self.withdraw()
         child.lift()
         child.focus_force()
         return child
+
+    @staticmethod
+    def _select_child_tab(frame: ttk.Frame, index: int) -> str:
+        if hasattr(frame, "select_tab"):
+            frame.select_tab(index)
+        return "break"
 
     def get_child_content(self, window_id: str) -> ttk.Frame | None:
         """Return the first content frame for a child window, if available."""
@@ -220,6 +259,37 @@ class TkMainWindow(tk.Tk):
         if "MEMORIA DE CALCULO - VERIFICACAO DE ICAMENTO" not in memory:
             return 1
         self.close_child_window("lifting")
+        if child.winfo_exists():
+            return 1
+
+        child = self.open_child_window("anchorage")
+        self.update_idletasks()
+        self.update()
+        anchorage_content = self.get_child_content("anchorage")
+        if not isinstance(anchorage_content, AnchorageCalculatorFrame):
+            return 1
+        if anchorage_content.passive_frame.last_result is None:
+            return 1
+        if anchorage_content.lap_splice_frame.last_result is None:
+            return 1
+        if anchorage_content.prestressing_frame.last_result is None:
+            return 1
+        passive_memory = anchorage_content.passive_frame.memory_text.get("1.0", "end")
+        lap_memory = anchorage_content.lap_splice_frame.memory_text.get("1.0", "end")
+        prestressing_memory = anchorage_content.prestressing_frame.memory_text.get("1.0", "end")
+        if "MEMORIA DE CALCULO - COMPRIMENTO DE ANCORAGEM" not in passive_memory:
+            return 1
+        if "MEMORIA DE CALCULO - EMENDA POR TRANSPASSE" not in lap_memory:
+            return 1
+        if "MEMORIA DE CALCULO - ANCORAGEM DE PROTENSAO ADERENTE" not in prestressing_memory:
+            return 1
+        anchorage_content.passive_frame._vars["effort"].set("Compressao")
+        self.update_idletasks()
+        self.update()
+        values = tuple(anchorage_content.passive_frame.anchorage_combo["values"])
+        if "Com Gancho" in values or "Com Gancho e Soldada" in values:
+            return 1
+        self.close_child_window("anchorage")
         if child.winfo_exists():
             return 1
 

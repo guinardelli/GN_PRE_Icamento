@@ -1,4 +1,4 @@
-"""Tkinter application entry point."""
+"""Compatibility entry point for the Tkinter application."""
 
 from __future__ import annotations
 
@@ -14,17 +14,7 @@ if __package__ in (None, ""):
     if project_root_str not in sys.path:
         sys.path.insert(0, project_root_str)
 
-from app.tk_ui.main_window import TkMainWindow
-
-
-def main() -> int:
-    smoke_test = "--smoke-test" in sys.argv
-    app = TkMainWindow()
-    if smoke_test:
-        return app.run_smoke_test()
-
-    app.mainloop()
-    return 0
+from app.main import main
 
 
 if __name__ == "__main__":

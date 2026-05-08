@@ -1,1 +1,2 @@
-PySide6
+# Runtime dependencies are intentionally empty.
+# Tkinter/ttk are provided by the standard Python installation on Windows.

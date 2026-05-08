@@ -4,7 +4,7 @@
 
 Este documento define as regras que devem ser seguidas por qualquer agente de IA, LLM ou ferramenta de desenvolvimento assistido ao trabalhar neste projeto.
 
-O objetivo é criar e manter um aplicativo desktop para Windows usando **Python 3.11+** e **PySide6**, com foco em simplicidade, estabilidade, clareza e facilidade de manutenção.
+O objetivo é criar e manter um aplicativo desktop para Windows usando **Python 3.11+** e **Tkinter/ttk**, com foco em simplicidade, estabilidade, clareza e facilidade de manutenção.
 
 ---
 
@@ -27,7 +27,7 @@ Não sacrifique simplicidade para aplicar padrões arquiteturais desnecessários
 ## 2. Stack obrigatória
 
 - Linguagem: **Python 3.11+**
-- Interface gráfica: **PySide6**
+- Interface gráfica: **Tkinter/ttk**
 - Sistema operacional alvo: **Windows**
 - Ambiente virtual recomendado: `venv`
 - Gerenciador de dependências: `pip`
@@ -186,7 +186,7 @@ Responsável pela lógica principal da aplicação:
 - Regras de negócio
 - Exceções específicas do domínio
 
-A camada `core/` deve ser a mais independente possível de PySide6.
+A camada `core/` deve ser a mais independente possível de Tkinter.
 
 Sempre que possível, ela deve poder ser testada sem abrir a interface gráfica.
 
@@ -231,7 +231,7 @@ Se uma função auxiliar pertence a uma regra de negócio, coloque-a em `core/`.
 
 ---
 
-## 7. Diretrizes para PySide6
+## 7. Diretrizes para Tkinter/ttk
 
 ### 7.1 Interface
 
@@ -240,7 +240,7 @@ A interface deve priorizar produtividade e clareza.
 Requisitos:
 
 - Usar tema claro
-- Usar widgets nativos do PySide6 sempre que possível
+- Usar widgets nativos do Tkinter/ttk sempre que possível
 - Manter visual limpo e consistente
 - Usar fontes padrão do sistema
 - Manter bom espaçamento entre elementos
@@ -265,7 +265,7 @@ Prefira construir a interface em código Python claro e modular.
 
 Evite arquivos `.ui` quando eles dificultarem a manutenção por agentes de IA.
 
-Use `signals` e `slots` de forma organizada.
+Use callbacks, variáveis observáveis e eventos Tkinter de forma organizada.
 
 Callbacks devem ser curtos.  
 Se uma ação crescer demais, extraia a lógica para um método, serviço ou classe apropriada.
@@ -357,7 +357,7 @@ A interface gráfica não precisa ter testes complexos inicialmente.
 
 Evite testar detalhes visuais frágeis.
 
-O ideal é que a lógica principal possa ser testada sem instanciar janelas PySide6.
+O ideal é que a lógica principal possa ser testada sem instanciar janelas Tkinter.
 
 ---
 
@@ -376,11 +376,7 @@ python app/main.py
 
 O arquivo `requirements.txt` deve conter apenas dependências realmente usadas.
 
-Exemplo inicial:
-
-```text
-PySide6
-```
+O projeto não deve ter dependências de runtime enquanto Tkinter/ttk for suficiente.
 
 ---
 
@@ -460,7 +456,7 @@ Antes de considerar uma tarefa concluída, verifique:
 
 O projeto será considerado adequado quando:
 
-- Rodar no Windows com Python 3.11+ e PySide6
+- Rodar no Windows com Python 3.11+ e Tkinter/ttk
 - Possuir interface clara, simples e em tema claro
 - Ter estrutura modular e compreensível
 - Separar interface, lógica de negócio e infraestrutura

@@ -11,13 +11,14 @@ Objetivos principais:
 - Reaproveitar integralmente a camada `app/core/`.
 - Evitar regressao mantendo a migracao paralela ate o corte final.
 
-Estado atual observado:
+Estado final observado:
 
 - A camada `app/core/` ja concentra os servicos e modelos de calculo.
-- A UI atual PySide6 esta em `app/ui/`.
-- Ja existe um preview Tkinter isolado do conversor em `tools/preview_rebar_converter_tkinter.py`.
-- Ainda nao existe `app/tk_ui/`.
-- O `requirements.txt` ainda contem `PySide6` e so deve ser alterado no corte final.
+- A UI oficial Tkinter esta em `app/tk_ui/`.
+- O ponto de entrada oficial e `app/main.py`.
+- `app/tk_main.py` permanece como wrapper de compatibilidade.
+- A UI PySide6 em `app/ui/` foi removida no corte final.
+- O `requirements.txt` nao possui dependencias de runtime.
 
 ## Regras da Migracao
 
@@ -99,105 +100,105 @@ Objetivo: portar a calculadora de alca preservando layout, calculo automatico, r
 - [x] Manter geometria, cores, labels e estado OK/falha proximos ao QPainter.
 - [x] Adicionar smoke test para calculo inicial.
 - [x] Adicionar smoke test para memoria preenchida.
-- [ ] Checkpoint: Alca Tkinter comparada lado a lado com PySide6.
+- [x] Checkpoint: Alca Tkinter comparada lado a lado com PySide6.
 
 ## Fase 4 - Calculadora Comprimento de Ancoragem
 
 Objetivo: portar a janela de ancoragem completa com suas tres familias de calculo.
 
-- [ ] Criar `app/tk_ui/calculators/anchorage_calculator.py`.
-- [ ] Reaproveitar `AnchorageVerifierService`.
-- [ ] Reaproveitar `LapSpliceService`.
-- [ ] Reaproveitar `PrestressingAnchorageService`.
-- [ ] Recriar janela com titulo `GN Pre - Ancoragem V 1.0`.
-- [ ] Recriar notebook principal.
-- [ ] Criar aba `Armadura passiva`.
-- [ ] Criar subaba `Verificacao`.
-- [ ] Criar subaba `Memoria de calculo`.
-- [ ] Criar aba `Emenda por transpasse`.
-- [ ] Criar aba `Cordoalhas/Fios`.
-- [ ] Portar campos e combos da armadura passiva.
-- [ ] Portar campos e combos da emenda por transpasse.
-- [ ] Portar campos e combos da protensao aderente.
-- [ ] Implementar recalculo automatico em todas as abas.
-- [ ] Manter regra visual de compressao: remover opcoes com gancho.
-- [ ] Manter aviso de ganchos nao considerados em compressao.
-- [ ] Implementar campos de resultado e status por aba.
-- [ ] Implementar memoria de calculo por aba.
-- [ ] Implementar botoes `Copiar Memoria`.
-- [ ] Criar `app/tk_ui/sketches/anchorage_sketch.py`.
-- [ ] Recriar croqui de ancoragem com `tk.Canvas`.
-- [ ] Manter geometria, cores, labels e estado OK/falha proximos ao QPainter.
-- [ ] Adicionar smoke test para abas principais.
-- [ ] Adicionar smoke test para memoria inicial.
-- [ ] Adicionar smoke test para regra de compressao.
-- [ ] Checkpoint: Ancoragem Tkinter comparada lado a lado com PySide6.
+- [x] Criar `app/tk_ui/calculators/anchorage_calculator.py`.
+- [x] Reaproveitar `AnchorageVerifierService`.
+- [x] Reaproveitar `LapSpliceService`.
+- [x] Reaproveitar `PrestressingAnchorageService`.
+- [x] Recriar janela com titulo `GN Pre - Ancoragem V 1.0`.
+- [x] Recriar notebook principal.
+- [x] Criar aba `Armadura passiva`.
+- [x] Criar subaba `Verificacao`.
+- [x] Criar subaba `Memoria de calculo`.
+- [x] Criar aba `Emenda por transpasse`.
+- [x] Criar aba `Cordoalhas/Fios`.
+- [x] Portar campos e combos da armadura passiva.
+- [x] Portar campos e combos da emenda por transpasse.
+- [x] Portar campos e combos da protensao aderente.
+- [x] Implementar recalculo automatico em todas as abas.
+- [x] Manter regra visual de compressao: remover opcoes com gancho.
+- [x] Manter aviso de ganchos nao considerados em compressao.
+- [x] Implementar campos de resultado e status por aba.
+- [x] Implementar memoria de calculo por aba.
+- [x] Implementar botoes `Copiar Memoria`.
+- [x] Criar `app/tk_ui/sketches/anchorage_sketch.py`.
+- [x] Recriar croqui de ancoragem com `tk.Canvas`.
+- [x] Manter geometria, cores, labels e estado OK/falha proximos ao QPainter.
+- [x] Adicionar smoke test para abas principais.
+- [x] Adicionar smoke test para memoria inicial.
+- [x] Adicionar smoke test para regra de compressao.
+- [x] Checkpoint: Ancoragem Tkinter comparada lado a lado com PySide6.
 
 ## Fase 5 - Estilo, Fidelidade e Usabilidade
 
 Objetivo: fazer o acabamento visual depois das telas funcionarem.
 
-- [ ] Centralizar dimensoes de janela em `app/tk_ui/styles.py`.
-- [ ] Centralizar cores em `app/tk_ui/styles.py`.
-- [ ] Centralizar paddings, margins e gaps.
-- [ ] Padronizar `LabelFrame`.
-- [ ] Padronizar botoes.
-- [ ] Padronizar campos somente leitura.
-- [ ] Padronizar campos invalidos.
-- [ ] Padronizar status OK/falha.
-- [ ] Conferir textos e acentos.
-- [ ] Conferir ordem de foco.
-- [ ] Conferir navegacao por teclado basica.
-- [ ] Comparar capturas ou revisao visual lado a lado com PySide6.
-- [ ] Checkpoint: revisao visual completa aprovada.
+- [x] Centralizar dimensoes de janela em `app/tk_ui/styles.py`.
+- [x] Centralizar cores em `app/tk_ui/styles.py`.
+- [x] Centralizar paddings, margins e gaps.
+- [x] Padronizar `LabelFrame`.
+- [x] Padronizar botoes.
+- [x] Padronizar campos somente leitura.
+- [x] Padronizar campos invalidos.
+- [x] Padronizar status OK/falha.
+- [x] Conferir textos e acentos.
+- [x] Conferir ordem de foco.
+- [x] Conferir navegacao por teclado basica.
+- [x] Comparar capturas ou revisao visual lado a lado com PySide6.
+- [x] Checkpoint: revisao visual completa aprovada.
 
 ## Fase 6 - Testes e Empacotamento Tkinter
 
 Objetivo: preparar distribuicao leve com PyInstaller sem remover PySide6 ainda.
 
-- [ ] Manter testes de `core` existentes.
-- [ ] Criar testes de smoke Tkinter.
-- [ ] Adaptar testes de widget PySide6 para smoke Tkinter quando fizer sentido.
-- [ ] Manter testes PySide6 enquanto a UI antiga existir.
-- [ ] Criar `packaging/GN_PRE_Icamento_tk.spec`.
-- [ ] Criar `tools/build_tk_exe.ps1`.
-- [ ] Build Tkinter nao deve importar `PySide6`.
-- [ ] Build Tkinter deve rodar `--smoke-test` no executavel gerado.
-- [ ] Comparar tamanho do pacote Tkinter com o pacote PySide6 atual.
-- [ ] Registrar resultado da comparacao no README ou em nota de release.
-- [ ] Checkpoint: build Tkinter distribuivel validado.
+- [x] Manter testes de `core` existentes.
+- [x] Criar testes de smoke Tkinter.
+- [x] Adaptar testes de widget PySide6 para smoke Tkinter quando fizer sentido.
+- [x] Manter testes PySide6 enquanto a UI antiga existir.
+- [x] Criar `packaging/GN_PRE_Icamento_tk.spec`.
+- [x] Criar `tools/build_tk_exe.ps1`.
+- [x] Build Tkinter nao deve importar `PySide6`.
+- [x] Build Tkinter deve rodar `--smoke-test` no executavel gerado.
+- [x] Comparar tamanho do pacote Tkinter com o pacote PySide6 atual.
+- [x] Registrar resultado da comparacao no README ou em nota de release.
+- [x] Checkpoint: build Tkinter distribuivel validado.
 
 ## Fase 7 - Corte Final da PySide6
 
 Objetivo: tornar Tkinter a interface oficial apenas depois de todos os checkpoints aprovados.
 
-- [ ] Confirmar que a UI Tkinter cobre todas as funcoes atuais.
-- [ ] Confirmar que o build Tkinter esta validado.
-- [ ] Trocar entrypoint oficial para Tkinter.
-- [ ] Atualizar comandos no README.
-- [ ] Remover `PySide6` do `requirements.txt`.
-- [ ] Remover ou arquivar `app/ui/`.
-- [ ] Remover specs PySide6 antigas ou marcar como legado.
-- [ ] Remover testes PySide6 ou converter para Tkinter.
-- [ ] Rodar `python -m pytest tests`.
-- [ ] Rodar `python app/tk_main.py --smoke-test`.
-- [ ] Rodar smoke test do executavel Tkinter.
-- [ ] Checkpoint final: app Tkinter substitui oficialmente a versao PySide6.
+- [x] Confirmar que a UI Tkinter cobre todas as funcoes atuais.
+- [x] Confirmar que o build Tkinter esta validado.
+- [x] Trocar entrypoint oficial para Tkinter.
+- [x] Atualizar comandos no README.
+- [x] Remover `PySide6` do `requirements.txt`.
+- [x] Remover ou arquivar `app/ui/`.
+- [x] Remover specs PySide6 antigas ou marcar como legado.
+- [x] Remover testes PySide6 ou converter para Tkinter.
+- [x] Rodar `python -m pytest tests`.
+- [x] Rodar `python app/tk_main.py --smoke-test`.
+- [x] Rodar smoke test do executavel Tkinter.
+- [x] Checkpoint final: app Tkinter substitui oficialmente a versao PySide6.
 
 ## Criterios de Aceite
 
-- [ ] App Tkinter abre no Windows.
-- [ ] Home Tkinter possui `NBR 9062` e `utilidades`.
-- [ ] Alca de icamento calcula automaticamente.
-- [ ] Comprimento de ancoragem calcula automaticamente.
-- [ ] Conversor bitola/espacamento calcula corretamente.
-- [ ] Memorias de calculo continuam disponiveis.
-- [ ] Botoes de copiar memoria funcionam.
-- [ ] Croquis existem em `Canvas` e representam os mesmos estados principais.
-- [ ] Testes de `core` continuam passando.
-- [ ] Smoke test Tkinter passa.
-- [ ] Executavel Tkinter e menor que o pacote PySide6 atual.
-- [ ] README contem comandos atualizados de execucao e build.
+- [x] App Tkinter abre no Windows.
+- [x] Home Tkinter possui `NBR 9062` e `utilidades`.
+- [x] Alca de icamento calcula automaticamente.
+- [x] Comprimento de ancoragem calcula automaticamente.
+- [x] Conversor bitola/espacamento calcula corretamente.
+- [x] Memorias de calculo continuam disponiveis.
+- [x] Botoes de copiar memoria funcionam.
+- [x] Croquis existem em `Canvas` e representam os mesmos estados principais.
+- [x] Testes de `core` continuam passando.
+- [x] Smoke test Tkinter passa.
+- [x] Executavel Tkinter e menor que o pacote PySide6 atual.
+- [x] README contem comandos atualizados de execucao e build.
 
 ## Riscos e Cuidados
 
@@ -220,5 +221,5 @@ python -m pytest tests
 Depois da fase de empacotamento:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\build_tk_exe.ps1
+powershell -ExecutionPolicy Bypass -File tools\build_exe.ps1
 ```

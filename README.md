@@ -1,6 +1,6 @@
-# GN PRE - Calculadoras
+# GN Estruturas - Calculadoras
 
-Aplicativo desktop para Windows, em Python 3.11+ e PySide6, com calculadoras auxiliares para pre-fabricados.
+Aplicativo desktop para Windows, em Python 3.11+ e Tkinter/ttk, com calculadoras auxiliares para pre-fabricados.
 
 A aplicacao abre em uma home compacta e sem menus. Cada calculadora abre em uma janela propria, acessada por botao/card, mantendo a navegacao clara e facilitando a inclusao gradual de novas ferramentas. Ao fechar a janela de uma calculadora, a home volta a ser exibida.
 
@@ -19,18 +19,19 @@ Os resultados sao recalculados automaticamente sempre que os dados de entrada sa
 
 ## Estrutura da aplicacao
 
-- `app/main.py`: ponto de entrada.
-- `app/ui/main_window.py`: home compacta e janelas das calculadoras.
-- `app/ui/home_widget.py`: tela inicial com a lista de calculadoras disponiveis.
-- `app/ui/calculators/`: widgets das calculadoras e registro simples.
+- `app/main.py`: ponto de entrada oficial Tkinter.
+- `app/tk_main.py`: ponto de entrada Tkinter mantido por compatibilidade.
+- `app/tk_ui/main_window.py`: home compacta e janelas das calculadoras.
+- `app/tk_ui/calculators/`: widgets Tkinter das calculadoras.
+- `app/tk_ui/utilities/`: widgets Tkinter das utilidades.
 - `app/core/`: modelos, validacoes e regras de negocio independentes da interface.
 - `app/infrastructure/`: exportacoes e detalhes externos.
 
 Para adicionar uma nova calculadora:
 
-1. Criar um novo widget em `app/ui/calculators/`.
+1. Criar um novo widget em `app/tk_ui/calculators/`.
 2. Manter regras de negocio testaveis em `app/core/`, quando houver logica relevante.
-3. Registrar a calculadora em `app/ui/calculators/registry.py`.
+3. Registrar a calculadora em `app/tk_ui/main_window.py`.
 4. Validar o fluxo Home -> Janela da calculadora -> fechar janela -> Home.
 
 ## Escopo da calculadora Alca de icamento
@@ -222,9 +223,19 @@ pip install -r requirements.txt
 python app/main.py
 ```
 
+O `requirements.txt` nao possui dependencias de runtime: Tkinter/ttk ja vem na instalacao padrao do Python no Windows.
+
+Para validacao automatizada rapida:
+
+```bash
+python app/main.py --smoke-test
+python app/tk_main.py --smoke-test
+python -m pytest tests
+```
+
 ## Como gerar o executavel Windows
 
-O empacotamento usa PyInstaller em modo `onedir`, que e mais leve para iniciar e mais previsivel com PySide6 do que `onefile`.
+O empacotamento usa PyInstaller em modo `onedir`, que e mais leve para iniciar e mais previsivel do que `onefile`.
 O PyInstaller e dependencia apenas de build; nao precisa entrar no `requirements.txt` de execucao.
 
 Se necessario, instale antes de empacotar:
@@ -255,4 +266,22 @@ Saida gerada:
 
 - `dist\GN_PRE_Icamento_1.0.0_windows_onefile.exe`
 
-Esse formato e mais simples de distribuir, mas pode demorar mais para abrir porque extrai as DLLs do PySide6 em uma pasta temporaria a cada execucao.
+Esse formato e mais simples de distribuir, mas pode demorar mais para abrir porque extrai os arquivos internos em uma pasta temporaria a cada execucao.
+
+## Compatibilidade com comando antigo
+
+O comando antigo abaixo continua existindo, mas agora apenas delega para o build oficial:
+
+```bash
+powershell -ExecutionPolicy Bypass -File tools\build_tk_exe.ps1
+```
+
+Resultado da comparacao antes do corte final, em 2026-05-08:
+
+- ZIP oficial Tkinter apos o corte: `dist\GN_PRE_Icamento_1.0.0_windows.zip`
+- Tamanho oficial atual: 11,63 MB
+- ZIP Tkinter: `dist\GN_PRE_Icamento_Tk_1.0.0_windows.zip`
+- Tamanho: 11,63 MB
+- ZIP PySide6 de referencia antes do corte final: `dist\GN_PRE_Icamento_1.0.0_windows.zip`
+- Tamanho PySide6 medido antes do corte final: 24,51 MB
+- Reducao aproximada com Tkinter: 12,87 MB, ou 52,5%.

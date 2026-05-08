@@ -1,60 +1,67 @@
-"""Tests for RebarConverterWidget."""
+"""Tests for the Tkinter rebar converter widget."""
 
-import os
+from __future__ import annotations
+
+import tkinter as tk
+from tkinter import ttk
 
 import pytest
-from PySide6.QtWidgets import QApplication, QCheckBox
 
-from app.ui.utilities.rebar_converter_widget import RebarConverterWidget
+from app.tk_ui.utilities.rebar_converter import RebarConverterFrame
 
 
 @pytest.fixture(scope="module")
-def app() -> QApplication:
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    existing = QApplication.instance()
-    if existing is not None:
-        return existing
-    return QApplication([])
+def root() -> tk.Tk:
+    try:
+        app = tk.Tk()
+    except tk.TclError as exc:
+        pytest.skip(f"Tkinter display is not available: {exc}")
+    app.withdraw()
+    yield app
 
 
-def test_converter_calculates_expected_spacing(app: QApplication) -> None:
-    widget = RebarConverterWidget()
-    app.processEvents()
-
-    widget.original_rebar_input.setCurrentIndex(
-        widget.original_rebar_input.findText("CA-50 - 8.0 mm")
-    )
-    widget.original_spacing_input.setValue(10.0)
-    widget.equivalent_rebar_input.setCurrentIndex(
-        widget.equivalent_rebar_input.findText("CA-50 - 16.0 mm")
-    )
-
-    widget.convert_button.click()
-    app.processEvents()
-
-    assert widget.equivalent_spacing_output.text() == "40.00"
+@pytest.fixture()
+def widget(root: tk.Tk) -> RebarConverterFrame:
+    frame = RebarConverterFrame(root)
+    frame.grid()
+    root.update_idletasks()
+    yield frame
+    frame.destroy()
+    root.update_idletasks()
 
 
-def test_converter_uses_steel_grade_from_selected_option(app: QApplication) -> None:
-    widget = RebarConverterWidget()
-    app.processEvents()
+def test_converter_calculates_expected_spacing(widget: RebarConverterFrame) -> None:
+    widget.original_rebar_var.set("CA-50 - 8.0 mm")
+    widget.original_spacing_var.set("10")
+    widget.equivalent_rebar_var.set("CA-50 - 16.0 mm")
 
-    widget.original_rebar_input.setCurrentIndex(
-        widget.original_rebar_input.findText("CA-50 - 8.0 mm")
-    )
-    widget.original_spacing_input.setValue(10.0)
-    widget.equivalent_rebar_input.setCurrentIndex(
-        widget.equivalent_rebar_input.findText("CA-60 - 8.0 mm")
-    )
+    widget.convert()
 
-    widget.convert_button.click()
-    app.processEvents()
-
-    assert widget.equivalent_spacing_output.text() == "12.00"
+    assert widget.equivalent_spacing_var.get() == "40.00"
 
 
-def test_converter_has_no_option_checkboxes(app: QApplication) -> None:
-    widget = RebarConverterWidget()
-    app.processEvents()
+def test_converter_uses_steel_grade_from_selected_option(widget: RebarConverterFrame) -> None:
+    widget.original_rebar_var.set("CA-50 - 8.0 mm")
+    widget.original_spacing_var.set("10")
+    widget.equivalent_rebar_var.set("CA-60 - 8.0 mm")
 
-    assert widget.findChildren(QCheckBox) == []
+    widget.convert()
+
+    assert widget.equivalent_spacing_var.get() == "12.00"
+
+
+def test_converter_has_no_option_checkboxes(widget: RebarConverterFrame) -> None:
+    checkboxes = [
+        child
+        for child in _walk_children(widget)
+        if isinstance(child, (tk.Checkbutton, ttk.Checkbutton))
+    ]
+
+    assert checkboxes == []
+
+
+def _walk_children(widget: tk.Misc) -> list[tk.Misc]:
+    children = list(widget.winfo_children())
+    for child in list(children):
+        children.extend(_walk_children(child))
+    return children

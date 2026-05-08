@@ -1,129 +1,125 @@
-"""Tests for AnchorageCalculatorWidget UI state."""
+"""Tests for Tkinter anchorage calculator UI state."""
 
-import os
+from __future__ import annotations
+
+import tkinter as tk
 
 import pytest
-from PySide6.QtWidgets import QApplication
 
-from app.ui.calculators.anchorage_widget import AnchorageCalculatorWidget
+from app.tk_ui.calculators.anchorage_calculator import AnchorageCalculatorFrame
 
 
 @pytest.fixture(scope="module")
-def app() -> QApplication:
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    existing = QApplication.instance()
-    if existing is not None:
-        return existing
-    return QApplication([])
+def root() -> tk.Tk:
+    try:
+        app = tk.Tk()
+    except tk.TclError as exc:
+        pytest.skip(f"Tkinter display is not available: {exc}")
+    app.withdraw()
+    yield app
 
 
-def _anchorage_options(widget: AnchorageCalculatorWidget) -> list[str]:
-    return [
-        widget.anchorage_type_input.itemText(index)
-        for index in range(widget.anchorage_type_input.count())
-    ]
+@pytest.fixture()
+def widget(root: tk.Tk) -> AnchorageCalculatorFrame:
+    frame = AnchorageCalculatorFrame(root)
+    frame.grid()
+    root.update_idletasks()
+    root.update()
+    yield frame
+    frame.destroy()
+    root.update_idletasks()
 
 
-def test_tension_shows_all_anchorage_types(app: QApplication) -> None:
-    widget = AnchorageCalculatorWidget()
-    app.processEvents()
+def _anchorage_options(widget: AnchorageCalculatorFrame) -> tuple[str, ...]:
+    return tuple(widget.passive_frame.anchorage_combo["values"])
 
-    assert widget.effort_type_input.currentText() == "Tracao"
-    assert _anchorage_options(widget) == [
+
+def test_tension_shows_all_anchorage_types(widget: AnchorageCalculatorFrame) -> None:
+    assert widget.passive_frame._vars["effort"].get() == "Tracao"
+    assert _anchorage_options(widget) == (
         "Reta",
         "Com Gancho",
         "Soldada",
         "Com Gancho e Soldada",
-    ]
-    assert widget.anchorage_rule_hint.isHidden()
+    )
+    assert not widget.passive_frame.anchorage_rule_hint.winfo_ismapped()
 
 
-def test_compression_hides_hook_options_and_shows_hint(app: QApplication) -> None:
-    widget = AnchorageCalculatorWidget()
-    widget.effort_type_input.setCurrentIndex(1)
-    app.processEvents()
+def test_compression_hides_hook_options_and_shows_hint(widget: AnchorageCalculatorFrame) -> None:
+    widget.passive_frame._vars["effort"].set("Compressao")
+    widget.update_idletasks()
 
-    assert widget.effort_type_input.currentText() == "Compressao"
-    assert _anchorage_options(widget) == ["Reta", "Soldada"]
-    assert not widget.anchorage_rule_hint.isHidden()
+    assert widget.passive_frame._vars["effort"].get() == "Compressao"
+    assert _anchorage_options(widget) == ("Reta", "Soldada")
+    assert widget.passive_frame.anchorage_rule_hint.grid_info()
 
 
-def test_switching_back_to_tension_restores_all_options(app: QApplication) -> None:
-    widget = AnchorageCalculatorWidget()
-    widget.effort_type_input.setCurrentIndex(1)
-    app.processEvents()
-    widget.effort_type_input.setCurrentIndex(0)
-    app.processEvents()
+def test_switching_back_to_tension_restores_all_options(widget: AnchorageCalculatorFrame) -> None:
+    widget.passive_frame._vars["effort"].set("Compressao")
+    widget.update_idletasks()
+    widget.passive_frame._vars["effort"].set("Tracao")
+    widget.update_idletasks()
 
-    assert widget.effort_type_input.currentText() == "Tracao"
-    assert _anchorage_options(widget) == [
+    assert _anchorage_options(widget) == (
         "Reta",
         "Com Gancho",
         "Soldada",
         "Com Gancho e Soldada",
-    ]
-    assert widget.anchorage_rule_hint.isHidden()
+    )
+    assert not widget.passive_frame.anchorage_rule_hint.grid_info()
 
 
-def test_anchorage_widget_uses_family_tabs(app: QApplication) -> None:
-    widget = AnchorageCalculatorWidget()
-    app.processEvents()
-
-    assert widget.family_tabs.tabText(0) == "Armadura passiva"
-    assert widget.family_tabs.tabText(1) == "Emenda por transpasse"
-    assert widget.family_tabs.tabText(2) == "Cordoalhas/Fios"
-    assert widget.passive_tabs.tabText(0) == "Verificação"
-    assert widget.passive_tabs.tabText(1) == "Memória de cálculo"
-    assert widget.lap_splice_widget.tabs.tabText(0) == "Verificação"
-    assert widget.lap_splice_widget.tabs.tabText(1) == "Memória de cálculo"
-    assert widget.prestressing_widget.tabs.tabText(0) == "Verificação"
-    assert widget.prestressing_widget.tabs.tabText(1) == "Memória de cálculo"
+def test_anchorage_widget_uses_family_tabs(widget: AnchorageCalculatorFrame) -> None:
+    assert widget.family_tabs.tab(0, "text") == "Armadura passiva"
+    assert widget.family_tabs.tab(1, "text") == "Emenda por transpasse"
+    assert widget.family_tabs.tab(2, "text") == "Cordoalhas/Fios"
+    assert widget.passive_frame.tabs.tab(0, "text") == "Verificação"
+    assert widget.passive_frame.tabs.tab(1, "text") == "Memória de cálculo"
+    assert widget.lap_splice_frame.tabs.tab(0, "text") == "Verificação"
+    assert widget.lap_splice_frame.tabs.tab(1, "text") == "Memória de cálculo"
+    assert widget.prestressing_frame.tabs.tab(0, "text") == "Verificação"
+    assert widget.prestressing_frame.tabs.tab(1, "text") == "Memória de cálculo"
 
 
-def test_prestressing_tab_has_detailed_memory(app: QApplication) -> None:
-    widget = AnchorageCalculatorWidget()
-    app.processEvents()
-
-    assert widget.family_tabs.tabText(2) == "Cordoalhas/Fios"
-    prestressing_widget = widget.prestressing_widget
-    memory = prestressing_widget.memory_text.toPlainText()
+def test_prestressing_tab_has_detailed_memory(widget: AnchorageCalculatorFrame) -> None:
+    memory = widget.prestressing_frame.memory_text.get("1.0", "end")
 
     assert "MEMORIA DE CALCULO - ANCORAGEM DE PROTENSAO ADERENTE" in memory
     assert "PREMISSAS ADOTADAS E LIMITACOES" in memory
     assert "COEFICIENTES DE ADERENCIA" in memory
 
 
-def test_family_switching_preserves_memories(app: QApplication) -> None:
-    widget = AnchorageCalculatorWidget()
-    app.processEvents()
-
-    passive_memory = widget.memory_text.toPlainText()
-    widget.family_tabs.setCurrentIndex(2)
-    app.processEvents()
-    prestressing_memory = widget.prestressing_widget.memory_text.toPlainText()
-    widget.family_tabs.setCurrentIndex(0)
-    app.processEvents()
+def test_family_switching_preserves_memories(widget: AnchorageCalculatorFrame) -> None:
+    passive_memory = widget.passive_frame.memory_text.get("1.0", "end")
+    widget.family_tabs.select(2)
+    widget.update_idletasks()
+    prestressing_memory = widget.prestressing_frame.memory_text.get("1.0", "end")
+    widget.family_tabs.select(0)
+    widget.update_idletasks()
 
     assert "MEMORIA DE CALCULO - COMPRIMENTO DE ANCORAGEM" in passive_memory
     assert "MEMORIA DE CALCULO - ANCORAGEM DE PROTENSAO ADERENTE" in prestressing_memory
-    assert "MEMORIA DE CALCULO - COMPRIMENTO DE ANCORAGEM" in widget.memory_text.toPlainText()
+    assert (
+        "MEMORIA DE CALCULO - COMPRIMENTO DE ANCORAGEM"
+        in widget.passive_frame.memory_text.get("1.0", "end")
+    )
 
 
 def test_lap_splice_tab_has_memory_and_compression_hides_alpha0t(
-    app: QApplication,
+    widget: AnchorageCalculatorFrame,
 ) -> None:
-    widget = AnchorageCalculatorWidget()
-    app.processEvents()
+    widget.family_tabs.select(1)
+    widget.update_idletasks()
+    lap_widget = widget.lap_splice_frame
 
-    lap_widget = widget.lap_splice_widget
-    assert "MEMORIA DE CALCULO - EMENDA POR TRANSPASSE" in lap_widget.memory_text.toPlainText()
-    assert not lap_widget.proportion_input.isHidden()
-    assert not lap_widget.alpha0t_display.isHidden()
+    assert "MEMORIA DE CALCULO - EMENDA POR TRANSPASSE" in lap_widget.memory_text.get("1.0", "end")
+    assert lap_widget.proportion_combo.grid_info()
+    assert lap_widget.alpha0t_entry.grid_info()
 
-    lap_widget.effort_type_input.setCurrentIndex(1)
-    app.processEvents()
+    lap_widget._vars["effort"].set("Compressao")
+    widget.update_idletasks()
 
-    assert lap_widget.effort_type_input.currentText() == "Compressao"
-    assert lap_widget.proportion_input.isHidden()
-    assert lap_widget.alpha0t_display.isHidden()
-    assert lap_widget.anchorage_type_input.count() == 2
+    assert lap_widget._vars["effort"].get() == "Compressao"
+    assert not lap_widget.proportion_combo.grid_info()
+    assert not lap_widget.alpha0t_entry.grid_info()
+    assert tuple(lap_widget.anchorage_combo["values"]) == ("Reta", "Soldada")

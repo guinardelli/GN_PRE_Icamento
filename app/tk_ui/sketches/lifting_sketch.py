@@ -6,6 +6,7 @@ import math
 import tkinter as tk
 
 from app.core.models import AnchorageType
+from app.tk_ui import styles
 
 
 class LiftingSketchCanvas(tk.Canvas):
@@ -16,9 +17,9 @@ class LiftingSketchCanvas(tk.Canvas):
             master,
             width=320,
             height=190,
-            bg="#ffffff",
+            bg=styles.SURFACE_COLOR,
             highlightthickness=1,
-            highlightbackground="#d8d8d8",
+            highlightbackground=styles.SKETCH_CANVAS_BORDER,
         )
         self._loops_count = 2
         self._anchorage_type = AnchorageType.HOOK_90
@@ -56,8 +57,8 @@ class LiftingSketchCanvas(tk.Canvas):
         width = max(self.winfo_width(), 300)
         height = max(self.winfo_height(), 170)
 
-        ok_color = "#0b6b2b"
-        fail_color = "#c62828"
+        ok_color = styles.OK_TEXT_COLOR
+        fail_color = styles.ERROR_TEXT_COLOR
         status_color = ok_color if self._capacity_is_ok and self._anchorage_is_ok else fail_color
         concrete_top = height * 0.58
         concrete_bottom = height * 0.78
@@ -68,7 +69,7 @@ class LiftingSketchCanvas(tk.Canvas):
             width / 2,
             15,
             text="Representacao grafica",
-            fill="#334155",
+            fill=styles.SKETCH_LABEL_COLOR,
             font=("Segoe UI", 9, "bold"),
         )
         self.create_rectangle(
@@ -76,22 +77,22 @@ class LiftingSketchCanvas(tk.Canvas):
             concrete_top,
             concrete_right,
             concrete_bottom,
-            fill="#e2e8f0",
-            outline="#94a3b8",
+            fill=styles.SKETCH_CONCRETE_FILL,
+            outline=styles.SKETCH_CONCRETE_BORDER,
             width=2,
         )
         self.create_text(
             concrete_left + 8,
             concrete_bottom + 12,
             anchor="w",
-            text="Peca de concreto",
-            fill="#475569",
+            text="Peça de concreto",
+            fill=styles.SKETCH_MUTED_COLOR,
             font=("Segoe UI", 8),
         )
 
         loop_centers = self._loop_centers(concrete_left, concrete_right)
         hook_y = height * 0.17
-        sling_color = "#475569"
+        sling_color = styles.SKETCH_MUTED_COLOR
         strand_color = status_color
         angle = min(max(self._inclination_deg, 1.0), 90.0)
         horizontal_shift = (90.0 - angle) / 90.0 * 42.0
@@ -150,7 +151,7 @@ class LiftingSketchCanvas(tk.Canvas):
                 f"Anc. disp. {self._available_anchorage_cm:.1f} cm  |  "
                 f"Anc. nec. {self._required_anchorage_cm:.1f} cm"
             ),
-            fill="#1d4ed8" if self._anchorage_is_ok else fail_color,
+            fill=styles.SKETCH_DIMENSION_COLOR if self._anchorage_is_ok else fail_color,
             font=("Segoe UI", 8, "bold"),
         )
         self.create_text(
@@ -159,7 +160,7 @@ class LiftingSketchCanvas(tk.Canvas):
             text=(
                 f"{self._loops_count} alca(s) - inclinacao {self._inclination_deg:.1f} graus"
             ),
-            fill="#475569",
+            fill=styles.SKETCH_MUTED_COLOR,
             font=("Segoe UI", 8),
         )
 

@@ -1,2 +1,0 @@
-"""Utility widgets and registries."""
-

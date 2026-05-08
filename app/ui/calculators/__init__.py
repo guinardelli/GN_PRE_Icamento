@@ -1,2 +1,0 @@
-"""Calculator widgets and registry."""
-

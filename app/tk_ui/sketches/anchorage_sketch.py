@@ -5,6 +5,7 @@ from __future__ import annotations
 import tkinter as tk
 
 from app.core.anchorage_models import AnchorageType
+from app.tk_ui import styles
 
 
 class AnchorageSketchCanvas(tk.Canvas):
@@ -15,9 +16,9 @@ class AnchorageSketchCanvas(tk.Canvas):
             master,
             width=330,
             height=210,
-            bg="#ffffff",
+            bg=styles.SURFACE_COLOR,
             highlightthickness=1,
-            highlightbackground="#d8d8d8",
+            highlightbackground=styles.SKETCH_CANVAS_BORDER,
         )
         self._anchorage_type = AnchorageType.STRAIGHT
         self._diameter_mm = 10.0
@@ -55,12 +56,12 @@ class AnchorageSketchCanvas(tk.Canvas):
         width = max(self.winfo_width(), 320)
         height = max(self.winfo_height(), 190)
 
-        ok_color = "#10b981"
-        fail_color = "#dc2626"
+        ok_color = styles.OK_TEXT_COLOR
+        fail_color = styles.ERROR_TEXT_COLOR
         bar_color = ok_color if self._anchorage_is_ok else fail_color
-        concrete_fill = "#e2e8f0"
-        concrete_border = "#7c8794"
-        label_color = "#334155"
+        concrete_fill = styles.SKETCH_CONCRETE_FILL
+        concrete_border = styles.SKETCH_CONCRETE_BORDER
+        label_color = styles.SKETCH_LABEL_COLOR
 
         left = width * 0.10
         right = width * 0.90
@@ -91,7 +92,7 @@ class AnchorageSketchCanvas(tk.Canvas):
 
         hatch_x = left + 14
         while hatch_x < right:
-            self.create_line(hatch_x, top, hatch_x - 25, bottom, fill="#cbd5e1")
+            self.create_line(hatch_x, top, hatch_x - 25, bottom, fill=styles.SKETCH_HATCH_COLOR)
             hatch_x += 16
 
         self.create_line(start_x, bar_y, available_end_x, bar_y, fill=bar_color, width=4)
@@ -113,12 +114,12 @@ class AnchorageSketchCanvas(tk.Canvas):
 
         if self._anchorage_type in (AnchorageType.WELDED, AnchorageType.HOOK_WELDED):
             weld_x = start_x + (available_end_x - start_x) * 0.20
-            self.create_line(weld_x, bar_y - 25, weld_x, bar_y + 25, fill="#0f172a", width=4)
-            self.create_line(weld_x - 8, bar_y - 8, weld_x + 8, bar_y - 8, fill="#0f172a", width=2)
-            self.create_line(weld_x - 8, bar_y + 8, weld_x + 8, bar_y + 8, fill="#0f172a", width=2)
+            self.create_line(weld_x, bar_y - 25, weld_x, bar_y + 25, fill=styles.SKETCH_WELD_COLOR, width=4)
+            self.create_line(weld_x - 8, bar_y - 8, weld_x + 8, bar_y - 8, fill=styles.SKETCH_WELD_COLOR, width=2)
+            self.create_line(weld_x - 8, bar_y + 8, weld_x + 8, bar_y + 8, fill=styles.SKETCH_WELD_COLOR, width=2)
 
         dim_y = height - 36
-        dim_color = "#1d4ed8" if self._anchorage_is_ok else fail_color
+        dim_color = styles.SKETCH_DIMENSION_COLOR if self._anchorage_is_ok else fail_color
         self.create_line(start_x, dim_y, available_end_x, dim_y, fill=dim_color, width=2)
         self.create_line(start_x, dim_y - 7, start_x, dim_y + 7, fill=dim_color, width=2)
         self.create_line(available_end_x, dim_y - 7, available_end_x, dim_y + 7, fill=dim_color, width=2)
