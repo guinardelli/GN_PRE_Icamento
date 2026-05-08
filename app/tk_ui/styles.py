@@ -1,0 +1,20 @@
+"""Shared Tkinter UI constants."""
+
+APP_TITLE = "GN Estruturas - Calculadoras"
+
+HOME_WIDTH = 360
+HOME_HEIGHT = 320
+
+PLACEHOLDER_WIDTH = 420
+PLACEHOLDER_HEIGHT = 220
+
+WINDOW_PAD = 14
+GROUP_PAD = 10
+GAP = 8
+
+BUTTON_WIDTH = 28
+
+BG_COLOR = "#f5f5f5"
+PANEL_COLOR = "#fbfbfb"
+TEXT_COLOR = "#111111"
+MUTED_TEXT_COLOR = "#444444"
